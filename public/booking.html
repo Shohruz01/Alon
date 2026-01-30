@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="tj">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+
+<title>Брон — PiBozor</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+<style>
+
+/* ===== PRO UI RESET ===== */
+
+*{
+ box-sizing:border-box;
+ margin:0;
+ padding:0;
+ font-family:system-ui,-apple-system,BlinkMacSystemFont;
+}
+
+body{
+ background:#eef2f7;
+ min-height:100vh;
+ padding-bottom:90px;
+}
+
+/* ===== HEADER ===== */
+
+.header{
+ position:sticky;
+ top:0;
+ z-index:999;
+
+ padding:16px;
+
+ background:linear-gradient(135deg,#2f80ed,#56ccf2);
+ color:white;
+
+ font-size:20px;
+ font-weight:700;
+
+ display:flex;
+ align-items:center;
+ justify-content:center;
+
+ box-shadow:0 6px 15px rgba(0,0,0,.2);
+}
+
+/* ===== FILTER BAR ===== */
+
+.filters{
+ padding:14px;
+ display:flex;
+ gap:10px;
+ background:#eef2f7;
+ position:sticky;
+ top:64px;
+ z-index:99;
+}
+
+select{
+ flex:1;
+ padding:12px 14px;
+ border-radius:14px;
+ border:none;
+ outline:none;
+ font-weight:600;
+ box-shadow:0 4px 12px rgba(0,0,0,.08);
+ background:white;
+}
+
+/* ===== GRID ===== */
+
+.grid{
+ display:grid;
+ grid-template-columns:repeat(2,1fr);
+ gap:14px;
+ padding:14px;
+}
+
+/* ===== CARD ===== */
+
+.card{
+ background:white;
+ border-radius:18px;
+ overflow:hidden;
+ box-shadow:0 10px 25px rgba(0,0,0,.12);
+ transition:.2s;
+ display:flex;
+ flex-direction:column;
+}
+
+.card:hover{
+ transform:translateY(-4px);
+}
+
+/* IMAGE */
+
+.card img{
+ width:100%;
+ height:140px;
+ object-fit:cover;
+}
+
+/* CONTENT */
+
+.card-body{
+ padding:12px;
+ flex:1;
+}
+
+.title{
+ font-weight:700;
+ margin-bottom:4px;
+}
+
+.city{
+ font-size:13px;
+ color:#777;
+ margin-bottom:6px;
+}
+
+.price{
+ font-size:18px;
+ font-weight:800;
+ color:#27ae60;
+ margin-bottom:8px;
+}
+
+/* BUTTON */
+
+.book-btn{
+ margin:10px;
+ border:none;
+ padding:12px;
+ border-radius:14px;
+ background:linear-gradient(135deg,#27ae60,#2ecc71);
+ color:white;
+ font-weight:700;
+ font-size:15px;
+ box-shadow:0 6px 15px rgba(0,0,0,.2);
+ cursor:pointer;
+}
+
+/* EMPTY */
+
+.empty{
+ text-align:center;
+ padding:40px;
+ color:#666;
+ font-weight:600;
+}
+
+/* RESPONSIVE */
+
+@media(min-width:700px){
+ .grid{
+  grid-template-columns:repeat(3,1fr);
+ }
+}
+
+</style>
+</head>
+
+<body>
+
+<!-- ===== HEADER ===== -->
+
+<div class="header">
+ 📅 Брон хизматҳо
+</div>
+
+<!-- ===== FILTERS ===== -->
+
+<div class="filters">
+
+<!-- CITY -->
+
+<select id="cityFilter">
+<option value="">Ҳамаи шаҳрҳо ва ноҳияҳо</option>
+<option>Душанбе</option>
+<option>Хуҷанд</option>                                    <option>Бохтар</option>                                    <option>Кӯлоб</option>                                     <option>Истаравшан</option>                                <option>Панҷакент</option>
+<option>Турсунзода</option>
+<option>Исфара</option>
+<option>Конибодом</option>                                 <option>Гулистон</option>                                  <option>Ваҳдат</option>                                    <option>Роғун</option>                                     <option>Норак</option>
+<option>Ҳисор</option>
+
+<option>Ашт</option>
+<option>Бобоҷон Ғафуров</option>                           <option>Деваштич</option>
+<option>Зафаробод</option>
+<option>Исмоили Сомонӣ</option>
+<option>Ҷаббор Расулов</option>                            <option>Кӯҳистони Мастчоҳ</option>                         <option>Мастчоҳ</option>                                   <option>Спитамен</option>                                  <option>Шаҳристон</option>                                                                                            <option>Балҷувон</option>
+<option>Вахш</option>
+<option>Восеъ</option>
+<option>Данғара</option>                                   <option>Дӯстӣ</option>
+<option>Ҷалолиддини Балхӣ</option>
+<option>Ҷайҳун</option>
+<option>Қабодиён</option>                                  <option>Кӯшониён</option>
+<option>Левакант</option>
+<option>Муъминобод</option>
+<option>Панҷ</option>
+<option>Темурмалик</option>
+<option>Фархор</option>
+<option>Ховалинг</option>
+<option>Шамсиддин Шоҳин</option>
+
+<option>Дарвоз</option>
+<option>Ишкошим</option>
+<option>Мурғоб</option>
+<option>Роштқалъа</option>                                 <option>Рӯшон</option>                                     <option>Шуғнон</option>                                    <option>Ванҷ</option>                                      
+</select>
+
+<!-- BOOKING CATEGORY -->                                                                                             <select id="cat" name="category" required>                 <option value="">Категория</option>                        <option value="sport">⚽ Майдони варзиш</option>
+<option value="billiard">🎱 Билярд</option>
+<option value="cs">🎮 Counter Strike</option>
+<option value="barber">💈 Сартарошхона</option>
+<option value="food">🍽 Тарабхона</option>                  </select>
+
+<!-- SUB CATEGORY -->
+
+<select id="sub" name="sub" style="display:none"></select>
+                                                    
+</div>
+
+<!-- ===== GRID ===== -->
+
+<div id="grid" class="grid"></div>
+
+<script>
+
+let ALL=[];
+
+// LOAD BOOKINGS
+fetch("/api/booking-ads")
+.then(r=>r.json())
+.then(d=>{
+ ALL=d;
+ render();
+});
+
+// GET FILTER ELEMENTS
+const cityFilter = document.getElementById("cityFilter");
+const catFilter  = document.getElementById("cat");
+
+// FILTER EVENTS
+cityFilter.addEventListener("change", render);
+catFilter.addEventListener("change", render);
+
+// RENDER
+function render(){
+
+ grid.innerHTML="";
+
+ const city=cityFilter.value;
+ const cat=catFilter.value;
+
+ let list=ALL.filter(a=>{
+
+  if(city && a.city!==city) return false;
+  if(cat && a.category!==cat) return false;
+
+  return true;
+ });
+
+ if(!list.length){
+  grid.innerHTML=`<div class="empty">Брон ёфт нашуд</div>`;
+  return;
+ }
+
+ list.forEach(ad=>{
+
+ grid.innerHTML+=`
+
+ <div class="card" onclick="openBooking(${ad.id})">
+
+  <img src="${ad.photos?.[0] || 'logo.png'}">
+
+  <div class="card-body">
+
+   <div class="title">${ad.title}</div>
+   <div class="city">📍 ${ad.city || "-"}</div>
+   <div class="price">${ad.price} сомонӣ / соат</div>
+
+  </div>
+
+  <button class="book-btn"
+ onclick="book('${ad.whatsapp}','${ad.title}')">
+  Брон кардан
+</button>
+
+ </div>
+
+ `;
+
+ });
+
+}
+
+// WHATSAPP BOOKING
+function book(phone,title){
+
+ if(!phone){
+  alert("WhatsApp илова нашудааст");
+  return;
+ }
+
+ const msg=encodeURIComponent(
+  "Салом! Ман мехоҳам брон кунам: "+title
+ );
+
+ window.open(
+  "https://wa.me/"+phone+"?text="+msg,
+  "_blank"
+ );
+}
+
+function openBooking(id){
+ window.location.href = "/booking-view.html?id=" + id;
+}
+
+</script>
+
+</body>
+</html>

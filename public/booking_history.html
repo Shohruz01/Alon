@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="tj">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Таърихи брон</title>
+
+<style>
+body{
+ font-family:system-ui;
+ background:#f2f4f8;
+ margin:0;
+ padding:12px;
+}
+
+h2{text-align:center}
+
+.card{
+ background:#ffeaea;
+ padding:12px;
+ border-radius:12px;
+ margin-bottom:10px;
+}
+</style>
+</head>
+
+<body>
+
+<h2>📜 Таърихи брон</h2>
+
+<div id="list">Загрузка...</div>
+
+<script>
+
+fetch("/api/my-booking-history")
+.then(r=>r.json())
+.then(data=>{
+
+ const box = document.getElementById("list");
+
+ if(!data.length){
+  box.innerHTML="📭 Таърих холӣ аст";
+  return;
+ }
+
+ box.innerHTML="";
+
+ data.forEach(b=>{
+
+ let statusText = "❌ Рад шуд";
+
+ if(b.status==="expired") statusText="⌛ Мӯҳлат гузашт";
+ if(b.finished) statusText="✅ Анҷом ёфт";
+
+ box.innerHTML += `
+  <div class="card">
+   👤 ${b.renterName}<br>
+   🏠 ${b.adTitle}<br>
+
+   📅 ${b.date}<br>
+   ⏰ ${b.start} - ${b.end}
+
+   ${statusText}
+  </div>
+ `;
+
+ });
+
+});
+
+</script>
+
+</body>
+</html>

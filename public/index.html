@@ -1,0 +1,1361 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>СУРХ</title>
+
+<style>
+
+:root{
+ --p:#2563eb;
+ --a:#ff4757;
+ --bg:#f2f4f8;
+ --card:#fff;
+ --radius:20px;
+ --blur:blur(18px);
+ --shadow:0 12px 30px rgba(0,0,0,.12);
+}
+
+/* RESET */
+
+*{
+ box-sizing:border-box;
+ margin:0;
+ padding:0;
+ font-family:system-ui,-apple-system;
+}
+
+html,body{
+ width:100%;
+ overflow-x:hidden;
+}
+
+/* HEADER */
+
+.header{
+ position:sticky;
+ top:0;
+ z-index:9999;
+ background:rgba(255,255,255,.85);
+ backdrop-filter:var(--blur);
+ padding:16px;
+ font-size:20px;
+ font-weight:900;
+ text-align:center;
+ box-shadow:0 4px 12px rgba(0,0,0,.06);
+}
+
+.logo-box{
+ display:flex;
+ justify-content:center;
+ align-items:center;
+}
+
+.logo-box img{
+ height:42px;
+ max-width:140px;
+ object-fit:contain;
+}
+
+/* SEARCH */
+
+.pro-filter{
+ position:sticky;
+ top:60px;
+ z-index:999;
+ padding:10px;
+ background:transparent;
+}
+
+.pro-filter input,
+.pro-filter select{
+ width:100%;
+ margin-top:8px;
+ padding:14px;
+ border:none;
+ border-radius:16px;
+ box-shadow:var(--shadow);
+}
+
+/* ===== SOMON STYLE CATEGORY GRID ===== */
+
+.categories{
+ padding:14px;
+}
+
+.main-cats{
+ display:grid;
+ grid-template-columns:repeat(auto-fit,minmax(110px,1fr));
+ gap:12px;
+}
+
+/* CATEGORY CARD */
+
+.cat-title{
+ background:#ffffff;
+ border-radius:18px;
+
+ padding:14px 10px;
+ min-height:92px;
+
+ display:flex;
+ flex-direction:column;
+ align-items:center;
+ justify-content:center;
+ gap:8px;
+
+ font-size:14px;
+ font-weight:800;
+ color:#111;
+
+ width:100%;
+
+ box-shadow:
+ 0 8px 20px rgba(0,0,0,.08),
+ inset 0 -1px 0 rgba(0,0,0,.05);
+
+ transition:
+ transform .12s ease,
+ box-shadow .12s ease,
+ background .12s ease;
+
+ user-select:none;
+ -webkit-tap-highlight-color:transparent;
+}
+
+/* ICON */
+
+.cat-title span:first-child{
+ font-size:28px;
+ line-height:1;
+}
+
+/* TEXT */
+
+.cat-title span:last-child{
+ text-align:center;
+ line-height:1.15;
+}
+
+/* PRESS EFFECT */
+
+.cat-title:active{
+ transform:scale(.96);
+ box-shadow:0 4px 10px rgba(0,0,0,.1);
+ background:#f7f9fc;
+}
+
+/* IOS SAFE FIX */
+
+@supports (-webkit-touch-callout: none){
+ .cat-title{
+  padding-top:16px;
+ }
+}
+
+/* SUB CATEGORY */
+
+.subcats{
+ margin-top:12px;
+ display:grid;
+ grid-template-columns:repeat(3,1fr);
+ gap:10px;
+
+ max-height:0;
+ overflow:hidden;
+ transition:.3s ease;
+}
+
+.subcats.show{
+ max-height:500px;
+}
+
+/* SUB ITEM */
+
+.cat{
+ background:#f8fafc;
+ border-radius:14px;
+ padding:12px;
+ text-align:center;
+ font-size:13px;
+ font-weight:600;
+ box-shadow:0 2px 6px rgba(0,0,0,.05);
+}
+
+/* MOBILE */
+
+@media(max-width:480px){
+
+ .categories{
+  grid-template-columns:repeat(2,1fr);
+ }
+
+ .subcats{
+  grid-template-columns:repeat(2,1fr);
+ }
+
+}
+
+/* MOBILE SAFE */
+
+html,body{
+ overflow-x:hidden;
+ width:100%;
+}
+
+/* ADS GRID */
+
+.ads{
+ padding:12px;
+ display:grid;
+ grid-template-columns:repeat(auto-fill,minmax(160px,1fr));
+ gap:14px;
+}
+
+/* CARD */
+
+.ad-card{
+ position:relative;
+ background:white;
+ border-radius:18px;
+ overflow:hidden;
+ box-shadow:var(--shadow);
+ transition:.15s;
+}
+
+.ad-card:active{
+ transform:scale(.97);
+}
+
+/* IMAGE */
+
+.ad-card img{
+ width:100%;
+ height:170px;
+ object-fit:cover;
+}
+
+/* INFO */
+
+.ad-info{
+ padding:10px;
+}
+
+.ad-price{
+ font-weight:900;
+ color:#16a34a;
+}
+
+.ad-title{
+ font-size:14px;
+ font-weight:700;
+ margin-top:4px;
+}
+
+.ad-city{
+ font-size:12px;
+ opacity:.7;
+}
+
+/* LIKE */
+
+.like-btn{
+ position:absolute;
+ top:10px;
+ right:10px;
+
+ width:36px;
+ height:36px;
+
+ background:white;
+ border-radius:50%;
+
+ display:flex;
+ align-items:center;
+ justify-content:center;
+
+ font-size:18px;
+
+ box-shadow:0 4px 12px rgba(0,0,0,.25);
+ z-index:10;
+}
+
+.like-btn.active{
+ background:#ff4757;
+ color:white;
+}
+
+/* BOTTOM NAV */
+
+.bottom-nav{
+ position:fixed;
+ bottom:0;
+ left:0;
+ right:0;
+ height:78px;
+ background:rgba(255,255,255,.85);
+ backdrop-filter:var(--blur);
+ display:flex;
+ justify-content:space-around;
+ align-items:center;
+ box-shadow:0 -6px 16px rgba(0,0,0,.08);
+ padding-bottom:env(safe-area-inset-bottom);
+}
+
+.bottom-nav a{
+ font-size:11px;
+ text-decoration:none;
+ color:#444;
+ display:flex;
+ flex-direction:column;
+ align-items:center;
+}
+
+/* PLUS BTN */
+
+.add-btn{
+ width:64px;
+ height:64px;
+ border-radius:50%;
+ background:linear-gradient(135deg,#2563eb,#4facfe);
+ color:white;
+ font-size:28px;
+ display:flex;
+ align-items:center;
+ justify-content:center;
+ margin-top:-35px;
+ box-shadow:0 12px 30px rgba(37,99,235,.6);
+}
+
+/* SKELETON */
+
+.skeleton{
+ background:linear-gradient(90deg,#eee,#f5f5f5,#eee);
+ background-size:200% 100%;
+ animation:skeleton 1.2s infinite;
+ height:170px;
+ border-radius:18px;
+}
+
+@keyframes skeleton{
+ 0%{background-position:0%}
+ 100%{background-position:200%}
+}
+
+.lang-box{
+ position:absolute;
+ right:12px;
+ top:12px;
+ display:flex;
+ gap:6px;
+}
+
+.section{
+ margin-bottom:22px;
+}
+
+.section-title{
+ font-size:18px;
+ font-weight:900;
+ padding:0 12px 8px;
+ display:flex;
+ justify-content:space-between;
+ align-items:center;
+}
+
+.section-row{
+ display:flex;
+ gap:12px;
+ padding:0 12px;
+ overflow-x:auto;
+ scroll-snap-type:x mandatory;
+}
+
+.section-row::-webkit-scrollbar{
+ display:none;
+}
+
+.section-row .ad-card{
+ min-width:170px;
+ scroll-snap-align:start;
+}
+
+.vip-badge{
+ position:absolute;
+ top:10px;
+ left:10px;
+ background:#facc15;
+ color:#000;
+ font-size:12px;
+ font-weight:900;
+ padding:4px 8px;
+ border-radius:8px;
+ z-index:5;
+}
+
+.logo-box{
+ display:flex;
+ flex-direction:column;
+ align-items:center;
+ gap:6px;
+}
+
+.logo-img{
+ height:46px;
+}
+
+.stats-box{
+ display:flex;
+ gap:8px;
+}
+
+.stat{
+ font-size:12px;
+ font-weight:700;
+ padding:4px 10px;
+ border-radius:20px;
+ background:#f1f5f9;
+ display:flex;
+ align-items:center;
+ gap:4px;
+}
+
+.online{
+ background:#22c55e;
+ color:white;
+ position:relative;
+}
+
+.total{
+ background:#2563eb;
+ color:white;
+}
+
+.pulse{
+ width:8px;
+ height:8px;
+ background:#fff;
+ border-radius:50%;
+ animation:pulse 1.5s infinite;
+}
+
+@keyframes pulse{
+ 0%{box-shadow:0 0 0 0 rgba(255,255,255,.7);}
+ 70%{box-shadow:0 0 0 10px rgba(255,255,255,0);}
+ 100%{box-shadow:0 0 0 0 rgba(255,255,255,0);}
+}
+
+.book-btn{
+ position:fixed;
+ bottom:75px;
+ right:20px;
+ background:#27ae60;
+ color:white;
+ border:none;
+ padding:14px 18px;
+ border-radius:50px;
+ font-weight:bold;
+ box-shadow:0 6px 15px rgba(0,0,0,.2);
+}
+
+.tabs{
+ display:flex;
+ position:sticky;
+ top:130px;
+ z-index:999;
+ background:white;
+
+ margin:10px 12px;
+ border-bottom:1px solid #eee;
+}
+
+.tab{
+ flex:1;
+ text-align:center;
+ padding:12px 0;
+ font-weight:600;
+ color:#999;
+ cursor:pointer;
+}
+
+.tab.active{
+ color:#000;
+}
+
+.tab-line{
+ position:absolute;
+ bottom:0;
+ left:0;
+ width:33.33%;
+ height:3px;
+ background:linear-gradient(90deg,#ff7a18,#ffb347);
+ border-radius:10px;
+ transition:.25s;
+}
+
+.ads{
+ padding-bottom:100px;
+}
+
+#homeSections{
+ margin-bottom:10px;
+}
+
+.tabs{
+ margin-top:10px;
+ background:white;
+ border-radius:14px;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<!-- HEADER -->
+<div class="header">
+<div class="logo-box">
+
+ <img src="/surh.png" class="logo-img">
+
+ <div class="stats-box">
+
+  <div id="onlineBox" class="stat online">
+   <span class="pulse"></span>
+   👤 <span id="onlineCount">0</span>
+  </div>
+
+  <div class="stat total">
+   👥 <span id="totalCount">0</span>
+  </div>
+
+ </div>
+
+</div>
+
+</div>
+
+
+<div style="position:fixed;right:10px;top:10px;z-index:9999">
+ <button onclick="setLang('tj')">TJ</button>
+ <button onclick="setLang('ru')">RU</button>
+</div>
+
+<!-- PRO FILTER BAR -->
+<div class="pro-filter">
+
+<select id="citySelect">
+<option value="" data-key="city"></option>
+
+<option value="Душанбе">Душанбе</option>
+<option value="Ҳисор">Ҳисор</option>
+<option value="Турсунзода">Турсунзода</option>
+<option value="Ваҳдат">Ваҳдат</option>
+<option value="Роғун">Роғун</option>
+
+<option value="Хуҷанд">Хуҷанд</option>
+<option value="Истаравшан">Истаравшан</option>
+<option value="Панҷакент">Панҷакент</option>
+<option value="Конибодом">Конибодом</option>
+<option value="Исфара">Исфара</option>
+<option value="Гулистон">Гулистон</option>
+<option value="Бӯстон">Бӯстон</option>
+
+<option value="Бохтар">Бохтар</option>
+<option value="Дӯстӣ">Дӯстӣ</option>
+<option value="Кӯлоб">Кӯлоб</option>
+<option value="Левакант">Левакант</option>
+<option value="Норак">Норак</option>
+<option value="Ёвон">Ёвон</option>
+<option value="Вахш">Вахш</option>
+<option value="Кушониён">Кушониён</option>
+<option value="Ҷайҳун">Ҷайҳун</option>
+<option value="Ҷалолиддини Балхӣ">Ҷалолиддини Балхӣ</option>
+<option value="Қубодиён">Қубодиён</option>
+<option value="Шаҳритус">Шаҳритус</option>
+<option value="Фархор">Фархор</option>
+<option value="Данғара">Данғара</option>
+<option value="Восеъ">Восеъ</option>
+<option value="Темурмалик">Темурмалик</option>
+<option value="Ховалинг">Ховалинг</option>
+<option value="Муъминобод">Муъминобод</option>
+<option value="Панҷ">Панҷ</option>
+
+<option value="Хоруғ">Хоруғ</option>
+<option value="Рӯшон">Рӯшон</option>
+<option value="Шуғнон">Шуғнон</option>
+<option value="Ишкошим">Ишкошим</option>
+<option value="Мурғоб">Мурғоб</option>
+<option value="Ванҷ">Ванҷ</option>
+<option value="Дарвоз">Дарвоз</option>
+
+<option value="Рашт">Рашт</option>
+<option value="Тоҷикобод">Тоҷикобод</option>
+<option value="Лахш">Лахш</option>
+<option value="Нуробод">Нуробод</option>
+<option value="Сангвор">Сангвор</option>
+<option value="Файзобод">Файзобод</option>
+
+</select>
+
+<input type="text" id="searchInput" data-key-placeholder="search" placeholder=""/>
+
+</div>
+
+<!-- CATEGORIES -->
+<div class="categories">
+
+<!-- MAIN GRID -->
+<div class="main-cats">
+
+<div class="cat-title" onclick="toggleCat('amvol')">
+ <span>🏠</span>
+ <span data-key="cat_realestate"></span>
+</div>
+
+<div class="cat-title" onclick="toggleCat('transport')">
+ <span>🚗</span>
+ <span data-key="cat_transport"></span>
+</div>
+
+<div class="cat-title" onclick="toggleCat('tech')">
+ <span>📱</span>
+ <span data-key="cat_tech"></span>
+</div>
+
+<div class="cat-title" onclick="toggleCat('job')">
+ <span>👨‍💼</span>
+ <span data-key="cat_job"></span>
+</div>
+
+<div class="cat-title" onclick="toggleCat('home')">
+ <span>🪑</span>
+ <span data-key="cat_home"></span>
+</div>
+
+<div class="cat-title" onclick="toggleCat('other')">
+ <span>📦</span>
+ <span data-key="cat_other"></span>
+</div>
+
+</div>
+
+<!-- ================= SUB CATEGORIES ================= -->
+
+<!-- REAL ESTATE -->
+<div id="amvol" class="subcats">
+ <div class="cat" onclick="goCategory('Квартира')">🏠 <span data-key="sub_flat"></span></div>
+ <div class="cat" onclick="goCategory('Хона')">🏡 <span data-key="sub_house"></span></div>
+ <div class="cat" onclick="goCategory('Иҷора')">🔑 <span data-key="sub_rent"></span></div>
+ <div class="cat" onclick="goCategory('Дӯкон')">🏢 <span data-key="sub_shop"></span></div>
+</div>
+
+<!-- TRANSPORT -->
+<div id="transport" class="subcats">
+ <div class="cat" onclick="goCategory('Мошин')">🚗 <span data-key="sub_car"></span></div>
+ <div class="cat" onclick="goCategory('Мотоцикл')">🏍 <span data-key="sub_moto"></span></div>
+ <div class="cat" onclick="goCategory('Скутер')">🛵 <span data-key="sub_scooter"></span></div>
+ <div class="cat" onclick="goCategory('Велосипед')">🚲 <span data-key="sub_bike"></span></div>
+</div>
+
+<!-- TECH -->
+<div id="tech" class="subcats">
+ <div class="cat" onclick="goCategory('Телефон')">📱 <span data-key="sub_phone"></span></div>
+ <div class="cat" onclick="goCategory('Компютер')">💻 <span data-key="sub_pc"></span></div>
+ <div class="cat" onclick="goCategory('Ноутбук')">🖥 <span data-key="sub_laptop"></span></div>
+ <div class="cat" onclick="goCategory('Телевизор')">📺 <span data-key="sub_tv"></span></div>
+</div>
+
+<!-- JOB -->
+<div id="job" class="subcats">
+ <div class="cat" onclick="goCategory('Кор')">👨‍💼 <span data-key="sub_work"></span></div>
+ <div class="cat" onclick="goCategory('Хизмат')">🛠 <span data-key="sub_service"></span></div>
+ <div class="cat" onclick="goCategory('Таксӣ')">🚕 <span data-key="sub_taxi"></span></div>
+ <div class="cat" onclick="goCategory('Курьер')">📦 <span data-key="sub_courier"></span></div>
+</div>
+
+<!-- HOME -->
+<div id="home" class="subcats">
+ <div class="cat" onclick="goCategory('Мебел')">🪑 <span data-key="sub_furniture"></span></div>
+ <div class="cat" onclick="goCategory('Асбоби хона')">🍳 <span data-key="sub_kitchen"></span></div>
+ <div class="cat" onclick="goCategory('Кондиционер')">❄ <span data-key="sub_conditioner"></span></div>
+ <div class="cat" onclick="goCategory('Холодилник')">🧊 <span data-key="sub_fridge"></span></div>
+</div>
+
+<!-- OTHER -->
+<div id="other" class="subcats">
+ <div class="cat" onclick="goCategory('Либос')">👕 <span data-key="sub_clothes"></span></div>
+ <div class="cat" onclick="goCategory('Ҳайвонот')">🐕 <span data-key="sub_animals"></span></div>
+ <div class="cat" onclick="goCategory('Китоб')">📚 <span data-key="sub_books"></span></div>
+ <div class="cat" onclick="goCategory('Дигар')">📦 <span data-key="sub_other"></span></div>
+</div>
+
+</div> <!-- END categories -->
+
+<!-- FILTER TABS -->
+<div class="tabs">
+
+ <div class="tab active" onclick="setTab(this,'new')">Новый</div>
+ <div class="tab" onclick="setTab(this,'popular')">Популярный</div>
+ <div class="tab" onclick="setTab(this,'top')">Топ</div>
+
+ <div class="tab-line"></div>
+
+</div>
+
+<!-- ADS SEPARATE BLOCK -->
+<div id="homeSections"></div>
+
+<!-- ADS GRID -->
+<div id="ads" class="ads"></div>
+</div>
+
+<!-- BOTTOM NAV -->
+
+<div class="bottom-nav">
+
+<a href="/">
+  🏠
+  <span data-key="home"></span>
+</a>
+
+<a href="/favorites.html">
+  ❤️
+  <span data-key="favorites"></span>
+</a>
+
+<div class="nav-item" onclick="goBooking()">
+ 📅
+ <span>Брон</span>
+</div>
+
+<a href="/add.html" class="add-btn">
+  ➕
+</a>
+
+  <a href="/chats.html" style="position:relative">
+
+ 💬
+ <span data-key="chats"></span>
+
+ <span id="chatCount" 
+ style="
+ position:absolute;
+ top:-5px;
+ right:-10px;
+ background:red;
+ color:white;
+ font-size:12px;
+ padding:2px 6px;
+ border-radius:50%;
+ display:none;
+ ">
+ 0
+ </span>
+
+</a>
+
+<a href="/profile" class="nav-item">
+ 👤 Профил
+</a>
+
+</div>
+
+<script>
+
+/* ================= STORAGE ================= */
+
+let likes = JSON.parse(localStorage.getItem("likes")) || {};
+let favs  = JSON.parse(localStorage.getItem("favs"))  || [];
+
+/* ================= DATA ================= */
+
+let ALL_ADS = [];
+let currentCategory = "";
+
+/* ================= ELEMENTS ================= */
+
+const adsBox   = document.getElementById("ads");
+const citySel  = document.getElementById("citySelect");
+const searchIn = document.getElementById("searchInput");
+
+/* ================= SKELETON ================= */
+
+function showSkeleton(){
+ adsBox.innerHTML = `
+  <div class="skeleton"></div>
+  <div class="skeleton"></div>
+  <div class="skeleton"></div>
+  <div class="skeleton"></div>
+ `;
+}
+
+/* ================= LOAD ADS ================= */
+
+showSkeleton();
+
+fetch("/api/normal-ads")
+.then(r=>r.json())
+.then(data=>{
+ ALL_ADS = data;
+
+ renderHomeSections();   // барои саҳифаи HOME
+ renderFiltered();       // барои search/filter
+});
+
+/* ================= FILTER ================= */
+
+const params = new URLSearchParams(window.location.search);
+const urlCat = params.get("cat");
+
+if(urlCat){
+ currentCategory = urlCat;
+}
+
+function renderFiltered(){
+
+ const city   = citySel.value;
+ const search = searchIn.value.toLowerCase();
+
+ let result = [...ALL_ADS];
+
+ // TAB FILTER
+ if(CURRENT_TAB==="new"){
+  result.sort((a,b)=>b.id-a.id);
+ }
+
+ if(CURRENT_TAB==="popular"){
+  result.sort((a,b)=>(b.views||0)-(a.views||0));
+ }
+
+ if(CURRENT_TAB==="top"){
+  result.sort((a,b)=>(b.likes||0)-(a.likes||0));
+ }
+
+ // CATEGORY
+ if(currentCategory){
+  result = result.filter(a=>a.category===currentCategory);
+ }
+
+ // CITY
+ if(city){
+  result = result.filter(a=>a.city===city);
+ }
+
+ // SEARCH
+ if(search){
+  result = result.filter(a=>
+   a.title.toLowerCase().includes(search) ||
+   a.phone.includes(search)
+  );
+ }
+
+ adsBox.innerHTML="";
+
+ if(!result.length){
+  adsBox.innerHTML=`<p style="padding:20px;text-align:center">Эълон нест ❌</p>`;
+  return;
+ }
+
+ result.forEach(renderAd);
+}
+
+/* ================= EVENTS ================= */
+
+citySel.addEventListener("change",renderFiltered);
+let typingTimer;
+
+searchIn.addEventListener("input",()=>{
+ clearTimeout(typingTimer);
+ typingTimer = setTimeout(renderFiltered,250);
+});
+
+/* ================= CATEGORY ================= */
+
+function loadCategory(cat){
+ currentCategory = cat;
+ renderFiltered();
+}
+
+function toggleCat(id){
+
+ const el = document.getElementById(id);
+ if(!el) return;
+
+ document.querySelectorAll(".subcats").forEach(box=>{
+  if(box !== el){
+   box.classList.remove("show");
+  }
+ });
+
+ el.classList.toggle("show");
+}
+
+/* ================= RENDER CARD ================= */
+
+function buildCard(ad){
+
+ const card = document.createElement("div");
+ card.className="ad-card";
+
+ card.onclick = ()=>location="/ad.html?id="+ad.id;
+
+ const img = ad.photos?.[0] || "/noimage.png";
+
+ card.innerHTML=`
+
+ <img src="${img}">
+
+ <div class="ad-info">
+  <div class="ad-price">💰 ${formatPrice(ad.price)}</div>
+  <div class="ad-title">${ad.title}</div>
+ </div>
+ `;
+
+ return card;
+}
+
+function formatPrice(price){
+
+ if(!price) return "0 сомонӣ";
+
+ return Number(price).toLocaleString("ru-RU") + " сомонӣ";
+}
+
+function renderAd(ad){
+
+ const card = document.createElement("div");
+ card.className="ad-card";
+
+ card.onclick = ()=>location="/ad.html?id="+ad.id;
+
+ const img = ad.photos?.[0] || "/noimage.png";
+
+ card.innerHTML=`
+
+ ${ad.vip ? `<div class="vip-badge">VIP</div>` : ""}
+
+ <div class="like-btn ${likes[ad.id]?"active":""}"
+ onclick="event.stopPropagation();toggleLike(${ad.id},this)">
+ ❤️
+ </div>
+
+ <img loading="lazy" src="${img}">
+
+ <div class="ad-info">
+  <div class="ad-price">💰 ${formatPrice(ad.price)}</div>
+  <div class="ad-title">${ad.title}</div>
+  <div class="ad-city">📍 ${ad.city}</div>
+ </div>
+ `;
+
+ adsBox.appendChild(card);
+}
+
+/* ================= LIKE ================= */
+
+function toggleLike(id,btn){
+
+ if(likes[id]) return;
+
+ likes[id]=1;
+ btn.classList.add("active");
+ if(!favs.includes(id)) favs.push(id);
+
+ fetch("/api/like",{
+  method:"POST",
+  headers:{
+   "Content-Type":"application/json"
+  },
+  body:JSON.stringify({adId:id})
+ });
+
+ localStorage.setItem("likes",JSON.stringify(likes));
+ localStorage.setItem("favs",JSON.stringify(favs));
+}
+
+/* ================= LANG ================= */
+
+const translations = {
+
+tj:{
+
+/* APP */
+app_name:"СУРХ",
+
+/* NAV */
+home:"Хона",
+favorites:"Маъқул",
+chats:"Паёмҳо",
+profile:"Профил",
+add:"Илова кардан",
+
+/* SEARCH */
+search:"Ҷустуҷӯ...",
+city:"Ҳамаи шаҳрҳо",
+
+/* STATUS */
+no_ads:"Эълон нест",
+loading:"Бор шуда истодааст...",
+
+/* BUTTONS */
+btn_login:"Даромад",
+btn_register:"Қайд шудан",
+btn_save:"Захира",
+btn_delete:"Нест кардан",
+btn_edit:"Ислоҳ",
+btn_send:"Фиристодан",
+
+/* CATEGORIES */
+cat_realestate:"Амвол",
+cat_transport:"Транспорт",
+cat_tech:"Электроника",
+cat_job:"Кор ва хизмат",
+cat_home:"Хона ва рӯзгор",
+cat_other:"Дигар",
+
+/* REAL ESTATE */
+sub_flat:"Квартира",
+sub_house:"Хона",
+sub_rent:"Иҷора",
+sub_shop:"Дӯкон",
+
+/* TRANSPORT */
+sub_car:"Мошин",
+sub_moto:"Мотоцикл",
+sub_scooter:"Скутер",
+sub_bike:"Велосипед",
+
+/* TECH */
+sub_phone:"Телефон",
+sub_pc:"Компютер",
+sub_laptop:"Ноутбук",
+sub_tv:"Телевизор",
+
+/* JOB */
+sub_work:"Кор",
+sub_service:"Хизмат",
+sub_taxi:"Таксӣ",
+sub_courier:"Курьер",
+
+/* HOME */
+sub_furniture:"Мебел",
+sub_kitchen:"Асбоб",
+sub_conditioner:"Кондиционер",
+sub_fridge:"Холодилник",
+
+/* OTHER */
+sub_clothes:"Либос",
+sub_animals:"Ҳайвонот",
+sub_books:"Китоб",
+sub_other:"Дигар",
+
+online_title:"Онлайн корбарон",
+total_title:"Ҳама корбарон",
+
+},
+
+ru:{
+
+/* APP */
+app_name:"СУРХ",
+
+/* NAV */
+home:"Главная",
+favorites:"Избранное",
+chats:"Сообщения",
+profile:"Профиль",
+add:"Добавить",
+
+/* SEARCH */
+search:"Поиск...",
+city:"Все города",
+
+/* STATUS */
+no_ads:"Объявлений нет",
+loading:"Загрузка...",
+
+/* BUTTONS */
+btn_login:"Войти",
+btn_register:"Регистрация",
+btn_save:"Сохранить",
+btn_delete:"Удалить",
+btn_edit:"Редактировать",
+btn_send:"Отправить",
+
+/* CATEGORIES */
+cat_realestate:"Недвижимость",
+cat_transport:"Транспорт",
+cat_tech:"Электроника",
+cat_job:"Работа и услуги",
+cat_home:"Дом и быт",
+cat_other:"Другое",
+
+/* REAL ESTATE */
+sub_flat:"Квартира",
+sub_house:"Дом",
+sub_rent:"Аренда",
+sub_shop:"Магазин",
+
+/* TRANSPORT */
+sub_car:"Авто",
+sub_moto:"Мотоцикл",
+sub_scooter:"Скутер",
+sub_bike:"Велосипед",
+
+/* TECH */
+sub_phone:"Телефон",
+sub_pc:"Компьютер",
+sub_laptop:"Ноутбук",
+sub_tv:"Телевизор",
+
+/* JOB */
+sub_work:"Работа",
+sub_service:"Услуги",
+sub_taxi:"Такси",
+sub_courier:"Курьер",
+
+/* HOME */
+sub_furniture:"Мебель",
+sub_kitchen:"Кухня",
+sub_conditioner:"Кондиционер",
+sub_fridge:"Холодильник",
+
+/* OTHER */
+sub_clothes:"Одежда",
+sub_animals:"Животные",
+sub_books:"Книги",
+sub_other:"Другое",
+
+online_title:"Пользователи онлайн",
+total_title:"Все пользователи",
+
+}
+
+};
+
+function setLang(l){
+ localStorage.setItem("lang",l);
+ applyLang();
+}
+
+function applyLang(){
+
+ const lang = localStorage.getItem("lang")||"tj";
+
+ document.querySelectorAll("[data-key]").forEach(el=>{
+  const k=el.dataset.key;
+  if(translations[lang][k]) el.innerText=translations[lang][k];
+ });
+
+ document.querySelectorAll("[data-key-placeholder]").forEach(el=>{
+  const k=el.dataset.keyPlaceholder;
+  if(translations[lang][k]) el.placeholder=translations[lang][k];
+ });
+
+document.getElementById("onlineBox").title =
+ translations[lang].online_title;
+
+}
+
+
+
+applyLang();
+
+/* ================= MOBILE APP FEEL ================= */
+
+document.addEventListener("click",e=>{
+ if(e.target.closest(".ad-card,.cat-title,.add-btn")){
+  navigator.vibrate?.(15);
+ }
+});
+
+/* PULL TO REFRESH */
+
+let startY=0;
+
+document.addEventListener("touchstart",e=>{
+ startY=e.touches[0].clientY;
+});
+
+document.addEventListener("touchend",e=>{
+ let endY=e.changedTouches[0].clientY;
+ if(startY<80 && endY-startY>120) location.reload();
+});
+
+/* FADE IN */
+
+window.onload=()=>{
+ document.body.style.opacity=0;
+ setTimeout(()=>{
+  document.body.style.transition=".4s";
+  document.body.style.opacity=1;
+ },30);
+};
+
+function goCategory(name){
+ window.location.href =
+ "/category.html?cat=" + encodeURIComponent(name);
+}
+
+const featuredCats = [
+ "Мошин",
+ "Квартира",
+ "Телефон",
+ "Хона"
+];
+
+function renderHomeSections(){
+
+if(!document.getElementById("homeSections")) return;
+
+ const box = document.getElementById("homeSections");
+ box.innerHTML = "";
+
+ const groups = {};
+
+ let ads = [...ALL_ADS];
+
+if(CURRENT_TAB==="new"){
+ ads.sort((a,b)=>b.id-a.id);
+}
+
+if(CURRENT_TAB==="popular"){
+ ads.sort((a,b)=>(b.views||0)-(a.views||0));
+}
+
+if(CURRENT_TAB==="top"){
+ ads.sort((a,b)=>(b.likes||0)-(a.likes||0));
+}
+
+ads.forEach(ad=>{
+
+  if(!featuredCats.includes(ad.category)) return;
+
+  if(!groups[ad.category]){
+   groups[ad.category] = [];
+  }
+
+  groups[ad.category].push(ad);
+ });
+
+ for(const cat in groups){
+
+  const sec = document.createElement("div");
+  sec.className = "section";
+
+  sec.innerHTML = `
+   <div class="section-title">
+    ${cat}
+    <span onclick="goCategory('${cat}')"
+     style="font-size:14px;color:#2563eb">
+     Ҳама →
+    </span>
+   </div>
+
+   <div class="section-row"></div>
+  `;
+
+  box.appendChild(sec);
+
+  const row = sec.querySelector(".section-row");
+
+  groups[cat].slice(0,8).forEach(ad=>{
+   row.appendChild(buildCard(ad));
+  });
+ }
+
+ if(!box.innerHTML.trim()){
+  box.style.display="none";
+ }
+
+}
+
+function goBooking(){
+ window.location.href = "/booking.html";
+}
+
+let CURRENT_TAB = "new";
+
+function setTab(el,type){
+
+ CURRENT_TAB = type;
+
+ document.querySelectorAll(".tab").forEach(t=>{
+  t.classList.remove("active");
+ });
+
+ el.classList.add("active");
+
+ const line = document.querySelector(".tab-line");
+
+ if(type==="new") line.style.left="0%";
+ if(type==="popular") line.style.left="33.33%";
+ if(type==="top") line.style.left="66.66%";
+
+ renderHomeSections();   // 🔥 ИНРО ИЛОВА КАРДЕМ
+ renderFiltered();
+}
+
+</script>
+
+<script src="/socket.io/socket.io.js"></script>
+
+<script>
+
+const socket = io();
+
+/* DEBUG */
+socket.on("connect", () => {
+ console.log("SOCKET CONNECTED ✅");
+});
+
+/* STATS RECEIVE */
+socket.on("stats", data => {
+
+ console.log("STATS:", data);
+
+ document.getElementById("onlineCount").innerText = data.online;
+ document.getElementById("totalCount").innerText = data.total;
+
+});
+
+</script>
+
+<script type="module">
+
+import { initializeApp } from
+"https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+
+import { getAuth, onAuthStateChanged } from
+"https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
+const firebaseConfig = {
+ apiKey: "AIzaSyD678JabDd5N-kcAme_lYxr867IhFC_peo",
+ authDomain: "surh-40611.firebaseapp.com",
+ projectId: "surh-40611"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+
+onAuthStateChanged(auth,(user)=>{
+
+ if(!user){
+  window.location.href="login.html";
+ }
+
+});
+
+
+</script>
+
+</body>
+</html>
+
+</body>
+</html>
+

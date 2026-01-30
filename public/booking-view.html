@@ -1,0 +1,704 @@
+<!DOCTYPE html>
+<html lang="tj">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<title>Маълумоти брон</title>
+
+<style>
+
+:root{
+ --main:#2f80ed;
+ --green:#27ae60;
+ --bg:#f3f6fb;
+}
+
+*{
+ box-sizing:border-box;
+}
+
+body{
+ margin:0;
+ font-family: "Inter", system-ui;
+ background:var(--bg);
+}
+
+/* HEADER */
+
+.header{
+ background:linear-gradient(135deg,#2f80ed,#56ccf2);
+ color:white;
+ padding:18px;
+ text-align:center;
+ font-size:18px;
+ font-weight:800;
+ letter-spacing:.3px;
+ box-shadow:0 4px 15px rgba(0,0,0,.2);
+}
+
+/* MAIN CARD */
+
+.card{
+ background:white;
+ margin:14px;
+ padding:14px;
+ border-radius:22px;
+ box-shadow:0 10px 25px rgba(0,0,0,.12);
+ animation:fade .3s ease;
+}
+
+@keyframes fade{
+ from{opacity:0;transform:translateY(10px)}
+ to{opacity:1;transform:translateY(0)}
+}
+
+img{
+ width:100%;
+ border-radius:18px;
+ margin-bottom:10px;
+ object-fit:cover;
+}
+
+/* TITLE */
+
+.title{
+ font-size:22px;
+ font-weight:900;
+ margin-top:6px;
+}
+
+.city{
+ display:flex;
+ align-items:center;
+ gap:6px;
+ color:#666;
+ margin-top:5px;
+ font-size:14px;
+}
+
+.price{
+ margin-top:6px;
+ color:#27ae60;
+ font-size:22px;
+ font-weight:900;
+}
+
+.desc{
+ margin-top:10px;
+ font-size:15px;
+ color:#444;
+ line-height:1.4;
+}
+
+/* FORM */
+
+.time-box{
+ margin-top:12px;
+ background:#f7faff;
+ padding:14px;
+ border-radius:18px;
+}
+
+.time-box label{
+ font-weight:700;
+ font-size:14px;
+ display:block;
+ margin-top:8px;
+}
+
+.time-box input,
+.time-box select{
+ width:100%;
+ padding:14px;
+ border-radius:14px;
+ border:1px solid #dfe6f1;
+ font-size:15px;
+ margin-top:6px;
+ outline:none;
+ background:white;
+}
+
+.time-box input:focus,
+.time-box select:focus{
+ border-color:var(--main);
+ box-shadow:0 0 0 2px rgba(47,128,237,.15);
+}
+
+/* END TIME PREVIEW */
+
+#endPreview{
+ margin-top:10px;
+ padding:10px;
+ border-radius:14px;
+ background:white;
+ font-weight:800;
+ text-align:center;
+ color:#2f80ed;
+ box-shadow:0 4px 12px rgba(0,0,0,.08);
+}
+
+/* MAIN BUTTON */
+
+.main-btn{
+ width:100%;
+ padding:16px;
+ margin-top:14px;
+ border:none;
+ border-radius:16px;
+ font-size:17px;
+ font-weight:900;
+ color:white;
+ background:linear-gradient(135deg,#27ae60,#2ecc71);
+ box-shadow:0 8px 18px rgba(39,174,96,.4);
+ transition:.2s;
+}
+
+.main-btn:active{
+ transform:scale(.97);
+ box-shadow:0 4px 12px rgba(39,174,96,.3);
+}
+
+/* MODAL */
+
+.modal{
+ position:fixed;
+ inset:0;
+ background:rgba(0,0,0,.6);
+ display:none;
+ align-items:center;
+ justify-content:center;
+ z-index:999;
+ backdrop-filter: blur(4px);
+}
+
+.modal-card{
+ background:white;
+ padding:22px;
+ width:88%;
+ max-width:360px;
+ border-radius:22px;
+ text-align:center;
+ animation:zoom .25s ease;
+}
+
+@keyframes zoom{
+ from{transform:scale(.85);opacity:.4}
+ to{transform:scale(1);opacity:1}
+}
+
+.code-box{
+ background:linear-gradient(135deg,#111,#222);
+ color:#00ff9c;
+ font-size:30px;
+ letter-spacing:6px;
+ padding:16px;
+ border-radius:16px;
+ margin:16px 0;
+ font-weight:900;
+ box-shadow:0 5px 15px rgba(0,0,0,.3);
+}
+
+/* MODAL BUTTONS */
+
+.copy-btn{
+ width:100%;
+ padding:14px;
+ background:linear-gradient(135deg,#2f80ed,#56ccf2);
+ border:none;
+ border-radius:14px;
+ color:white;
+ font-weight:800;
+ margin-bottom:10px;
+ box-shadow:0 6px 15px rgba(47,128,237,.35);
+}
+
+.close-btn{
+ width:100%;
+ padding:12px;
+ border:none;
+ border-radius:14px;
+ background:#f1f1f1;
+ font-weight:700;
+}
+
+.promo-box{
+ position:fixed;
+ bottom:20px;
+ left:50%;
+ transform:translateX(-50%);
+ width:90%;
+ max-width:380px;
+ background:white;
+ padding:18px;
+ border-radius:18px;
+ box-shadow:0 10px 25px rgba(0,0,0,.2);
+ text-align:center;
+ z-index:9999;
+}
+
+.promo-title{
+ font-weight:800;
+ color:#27ae60;
+ margin-bottom:10px;
+}
+
+.promo-code{
+ background:#f5f7fa;
+ padding:16px;
+ border-radius:14px;
+ font-size:22px;
+ font-weight:900;
+ letter-spacing:3px;
+ margin-bottom:8px;
+}
+
+.promo-timer{
+ color:#e67e22;
+ font-weight:700;
+ margin-bottom:6px;
+}
+
+.promo-text{
+ font-size:14px;
+ color:#555;
+}
+
+</style>
+</head>
+<body>
+
+<div id="promoModal" class="modal">
+ <div class="modal-card">
+
+  <h2>✅ Брон сабт шуд</h2>
+
+  <div class="code-box" id="promoText"></div>
+
+  <p id="promoHint">
+   📌 Ин промокодро ба иҷорадеҳ диҳед
+  </p>
+
+  <div id="timerBox" style="
+   margin:10px 0;
+   font-weight:800;
+   color:#ff9800;
+  ">
+  </div>
+
+  <button onclick="copyPromo()" class="copy-btn">
+   📋 Нусха кардан
+  </button>
+
+ </div>
+</div>
+
+<div class="header">📅 Тафсилоти брон</div>
+
+<div class="card" id="box">
+Загрузка...
+</div>
+
+<script>
+
+
+
+const params = new URLSearchParams(window.location.search);
+const id = params.get("id");
+const AD_ID = id;
+console.log("ID =", id);
+
+if(!id){
+ document.getElementById("box").innerHTML="❌ ID нест";
+ throw "No ID";
+}
+
+fetch("/api/ad/" + id)
+.then(r=>{
+ if(!r.ok) throw new Error("Not found");
+ return r.json();
+})
+.then(d=>{
+console.log("DATA =", d);
+
+ if(d.message === "Аввал ба аккаунт ворид шавед"){
+  location.href="/login.html";
+  return;
+ }
+
+ const ad = d;
+
+ window.CURRENT_CATEGORY = ad.category;
+ window.CURRENT_PHONE = ad.whatsapp || ad.phone;
+
+ document.getElementById("box").innerHTML = `
+
+ <img src="${ad.photos?.[0] || 'logo.png'}">
+
+ <div class="title">${ad.title}</div>
+ <div class="city">📍 ${ad.city}</div>
+ <div class="price">${ad.price} сомонӣ / соат</div>
+
+ <div class="desc">${ad.desc || ""}</div>
+
+ <div class="time-box">
+
+ <label>📅 Сана</label>
+ <input type="date" id="date">
+
+ <label>⏰ Вақти оғоз</label>
+ <input type="time" id="start" step="1200">
+
+ <label>⏳ Давомнокӣ</label>
+
+ <select id="duration">
+  <option value="">Интихоб кунед</option>
+  <option value="20">20 дақиқа</option>
+  <option value="30">30 дақиқа</option>
+  <option value="60">1 соат</option>
+  <option value="120">2 соат</option>
+  <option value="180">3 соат</option>
+ </select>
+
+ <div id="endPreview"></div>
+
+ <button class="main-btn" onclick="createBooking()">
+  Брон кардан
+ </button>
+
+ </div>
+ `;
+
+ document.getElementById("duration").addEventListener("change", ()=>{
+  controlMinutes();
+  calcEnd();
+ });
+
+ document.getElementById("start").addEventListener("change", ()=>{
+  normalizeTime();
+ });
+
+})
+.catch(()=>{
+ document.getElementById("box").innerHTML="❌ Эълон ёфт нашуд";
+});
+
+function createBooking(){
+
+ const btn = document.querySelector(".main-btn");
+ btn.disabled = true;
+
+ const dateInput = document.getElementById("date").value;
+ const start = document.getElementById("start").value;
+ const end = window.END_TIME;
+
+ if(!dateInput || !start || !end){
+  alert("Ҳамаи вақтҳоро интихоб кунед");
+  btn.disabled = false;
+  return;
+ }
+
+ fetch("/api/request-booking",{
+  method:"POST",
+  headers:{ "Content-Type":"application/json" },
+  body:JSON.stringify({
+   adId: id,
+   date: dateInput,
+   start,
+   end,
+   category: CURRENT_CATEGORY
+  })
+ })
+ .then(r=>r.json())
+ .then(d=>{
+
+  if(!d.success){
+   alert(d.message || "Хато шуд");
+   btn.disabled = false;
+   return;
+  }
+
+  showPromo(d.promo, d.expireAt);
+
+ });
+
+}
+
+function closeModal(){
+ document.getElementById("promoModal").style.display = "none";
+}
+
+function copyPromo(){
+
+const text = document.getElementById("promoText").innerText;
+
+ // MODERN WAY
+ if(navigator.clipboard){
+  navigator.clipboard.writeText(text)
+  .then(()=>{
+   alert("✅ Код нусха шуд");
+  })
+  .catch(()=>{
+   fallbackCopy(text);
+  });
+ }else{
+  fallbackCopy(text);
+ }
+
+}
+
+window.onload = ()=>{
+
+const code = localStorage.getItem("promo_"+AD_ID);
+const expire = localStorage.getItem("promoExpire_"+AD_ID);
+
+ if(!code || !expire) return;
+
+ if(Date.now() > expire){
+  clearPromo();
+  return;
+ }
+
+ setTimeout(()=>{     // WAIT UNTIL DOM READY
+  document.getElementById("promoText").innerText = code;
+  document.getElementById("promoModal").style.display="flex";
+  startTimer();
+  lockBooking();
+ },300);
+
+}
+
+// BACKUP METHOD (100% WORKING)
+function fallbackCopy(text){
+
+ const input = document.createElement("textarea");
+ input.value = text;
+
+ document.body.appendChild(input);
+
+ input.select();
+ input.setSelectionRange(0,99999);
+
+ document.execCommand("copy");
+
+ document.body.removeChild(input);
+
+ alert("✅ Код нусха шуд");
+
+}
+
+function calcEnd(){
+
+ const start = document.getElementById("start").value;
+ const dur   = document.getElementById("duration").value;
+
+ if(!start || !dur) return;
+
+ const [h,m] = start.split(":").map(Number);
+
+ let total = h*60 + m + Number(dur);
+
+ let eh = Math.floor(total/60);
+ let em = total%60;
+
+ const endTime =
+  String(eh).padStart(2,"0")+
+  ":"+
+  String(em).padStart(2,"0");
+
+ document.getElementById("endPreview").innerHTML =
+ "⏱ Вақти анҷом: <b>"+endTime+"</b>";
+
+ window.END_TIME = endTime;
+}
+
+function controlMinutes(){
+
+ const dur = document.getElementById("duration").value;
+ const startInput = document.getElementById("start");
+
+ if(!dur) return;
+
+ // 20 min
+ if(dur == "20"){
+  startInput.step = 1200; // 20 min
+ }
+
+ // 30 min
+ else if(dur == "30"){
+  startInput.step = 1800; // 30 min
+ }
+
+ // 1h or 3h
+ else{
+  startInput.step = 3600; // only hours
+ }
+
+ // reset minute to valid value
+ let t = startInput.value;
+ if(t){
+  let [h,m] = t.split(":");
+  startInput.value = h + ":00";
+ }
+
+}
+
+function normalizeTime(){
+
+ const dur = document.getElementById("duration").value;
+ const input = document.getElementById("start");
+
+ if(!dur || !input.value) return;
+
+ let [h,m] = input.value.split(":").map(Number);
+
+ let step = Number(dur);
+
+ // HOURS MODE
+ if(step >= 60){
+
+  input.value =
+   String(h).padStart(2,"0") + ":00";
+
+  calcEnd();
+  return;
+ }
+
+ // MINUTES MODE (20 / 30)
+
+ let allowed = [];
+
+ for(let i=0;i<60;i+=step){
+  allowed.push(i);
+ }
+
+ let nearest = allowed.reduce((a,b)=>
+  Math.abs(b-m) < Math.abs(a-m) ? b : a
+ );
+
+ input.value =
+  String(h).padStart(2,"0") +
+  ":" +
+  String(nearest).padStart(2,"0");
+
+ calcEnd();
+}
+
+function showLoginRequired(){
+
+ const modal = document.getElementById("promoModal");
+
+ document.querySelector(".modal-card").innerHTML = `
+  <h2 style="color:#ff5252">🔐 Воридшавӣ лозим аст</h2>
+
+  <p>Барои брон кардан аввал ба аккаунтат ворид шав</p>
+
+  <a href="/login.html" style="
+   display:block;
+   margin-top:12px;
+   background:#2f80ed;
+   color:white;
+   padding:12px;
+   border-radius:12px;
+   text-decoration:none;
+   font-weight:800
+  ">Ворид шудан</a>
+
+  <button onclick="closeModal()" class="close-btn">
+   Бекор
+  </button>
+ `;
+
+ modal.style.display="flex";
+}
+
+function showPromo(code, expire){
+
+ const modal = document.getElementById("promoModal");
+ const promoText = document.getElementById("promoText");
+
+localStorage.setItem("promo_"+AD_ID, code);
+localStorage.setItem("promoExpire_"+AD_ID, expire);
+
+ promoText.innerText = code;
+ modal.style.display = "flex";
+
+ startTimer();
+ lockBooking();
+}
+
+function startTimer(){
+
+ const box = document.getElementById("timerBox");
+
+ const interval = setInterval(()=>{
+
+const expire = Number(localStorage.getItem("promoExpire_"+AD_ID));
+
+  if(!expire){
+   clearInterval(interval);
+   return;
+  }
+
+  const diff = expire - Date.now();
+
+  if(diff <= 0){
+   clearInterval(interval);
+   clearPromo();
+   return;
+  }
+
+  const min = Math.floor(diff/60000);
+  const sec = Math.floor((diff%60000)/1000);
+
+  box.innerText =
+   "⏳ Мондааст: "+
+   String(min).padStart(2,"0")+":"+
+   String(sec).padStart(2,"0");
+
+ },1000);
+}
+
+function lockBooking(){
+
+ document.querySelector(".main-btn").disabled = true;
+ document.querySelector(".main-btn").innerText =
+  "⛔ Промокод фаъол аст";
+}
+function clearPromo(){
+
+ localStorage.removeItem("promo_"+AD_ID);
+localStorage.removeItem("promoExpire_"+AD_ID);
+
+ document.getElementById("promoModal").style.display="none";
+
+ const btn = document.querySelector(".main-btn");
+ btn.disabled = false;
+ btn.innerText = "Брон кардан";
+}
+
+function copyPromo(){
+
+ const code = document.getElementById("promoText").innerText;
+
+ if(navigator.clipboard){
+  navigator.clipboard.writeText(code)
+  .then(()=>alert("✅ Нусха шуд"));
+ }else{
+
+  const t=document.createElement("textarea");
+  t.value=code;
+  document.body.appendChild(t);
+  t.select();
+  document.execCommand("copy");
+  document.body.removeChild(t);
+
+  alert("✅ Нусха шуд");
+ }
+
+}
+
+</script>
+
+</body>
+</html>

@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="tj">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Login</title>
+
+<style>
+
+*{
+ box-sizing:border-box;
+ font-family:system-ui;
+}
+
+body{
+ margin:0;
+ height:100vh;
+ display:flex;
+ justify-content:center;
+ align-items:center;
+ background:linear-gradient(135deg,#2f80ed,#56ccf2);
+}
+
+/* ===== CARD ===== */
+
+.login-card{
+ width:92%;
+ max-width:360px;
+ background:rgba(255,255,255,.15);
+ backdrop-filter:blur(18px);
+ border-radius:22px;
+ padding:25px;
+ text-align:center;
+ box-shadow:0 15px 40px rgba(0,0,0,.25);
+ color:white;
+ position:relative;
+}
+
+/* ===== LANG SWITCH ===== */
+
+.lang{
+ position:absolute;
+ top:12px;
+ right:12px;
+}
+
+.lang button{
+ border:none;
+ padding:5px 10px;
+ border-radius:8px;
+ font-weight:600;
+ margin-left:4px;
+ cursor:pointer;
+}
+
+/* LOGO */
+
+.logo{
+ width:90px;
+ margin-bottom:10px;
+ animation:float 2s infinite ease-in-out;
+}
+
+@keyframes float{
+ 0%{transform:translateY(0)}
+ 50%{transform:translateY(-7px)}
+ 100%{transform:translateY(0)}
+}
+
+/* TITLE */
+
+h2{
+ margin:8px 0 18px;
+ letter-spacing:.5px;
+}
+
+/* GOOGLE BUTTON */
+
+#googleLogin{
+ width:100%;
+ padding:14px;
+ border:none;
+ border-radius:14px;
+ font-size:16px;
+ font-weight:700;
+ cursor:pointer;
+
+ display:flex;
+ align-items:center;
+ justify-content:center;
+ gap:10px;
+
+ background:white;
+ color:#333;
+
+ box-shadow:0 6px 12px rgba(0,0,0,.2);
+ transition:.2s;
+}
+
+#googleLogin:hover{
+ transform:scale(1.03);
+}
+
+#googleLogin:active{
+ transform:scale(.97);
+}
+
+/* FOOT */
+
+.footer{
+ margin-top:15px;
+ font-size:13px;
+ opacity:.85;
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="login-card">
+
+<!-- LANGUAGE -->
+
+<div class="lang">
+ <button onclick="setLang('tj')">TJ</button>
+ <button onclick="setLang('ru')">RU</button>
+</div>
+
+<img src="logo.png" class="logo">
+
+<h2 id="title">Ворид шудан</h2>
+
+<button id="googleLogin">
+ <img src="https://cdn-icons-png.flaticon.com/512/281/281764.png" width="22">
+ <span id="btnTxt">Бо Google ворид шудан</span>
+</button>
+
+<div class="footer" id="footerTxt">
+ Муҳофизати Google Login 🔐
+</div>
+
+</div>
+
+<!-- ===== FIREBASE AUTH ===== -->
+
+<script type="module" src="/firebase.js"></script>
+<script type="module" src="/auth.js"></script>
+
+<!-- ===== LANG SCRIPT ===== -->
+
+<script>
+
+let lang = localStorage.getItem("lang") || "tj";
+
+const TXT = {
+
+ tj:{
+  title:"Ворид шудан",
+  btn:"Бо Google ворид шудан",
+  footer:"Муҳофизати Google Login 🔐"
+ },
+
+ ru:{
+  title:"Вход",
+  btn:"Войти через Google",
+  footer:"Безопасная авторизация Google 🔐"
+ }
+
+};
+
+function applyLang(){
+ document.getElementById("title").innerText = TXT[lang].title;
+ document.getElementById("btnTxt").innerText = TXT[lang].btn;
+ document.getElementById("footerTxt").innerText = TXT[lang].footer;
+}
+
+function setLang(l){
+ lang = l;
+ localStorage.setItem("lang", l);
+ applyLang();
+}
+
+applyLang();
+
+</script>
+
+</body>
+</html>

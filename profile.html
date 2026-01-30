@@ -1,0 +1,14 @@
+<h2>Welcome</h2>
+
+<button id="logout">Logout</button>
+
+<script type="module">
+import { auth } from "./firebase.js";
+import { signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
+document.getElementById("logout").onclick = ()=>{
+ signOut(auth).then(()=>{
+  window.location="login.html";
+ });
+}
+</script>

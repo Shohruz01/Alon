@@ -1,0 +1,146 @@
+[
+  {
+    "id": 1769665158815,
+    "title": "Ggggg",
+    "price": "79800",
+    "phone": "1244433",
+    "desc": "Ffgggds",
+    "category": "Скутер",
+    "city": "Конибодом",
+    "photos": [
+      "/uploads/1769665149291.jpg"
+    ],
+    "userId": 1769607008937,
+    "booking": false,
+    "time": 1769665158816,
+    "views": 1
+  },
+  {
+    "id": 1769665218066,
+    "title": "Bbgff",
+    "price": "Gffd",
+    "phone": "Gfdd",
+    "desc": "Bcxs",
+    "category": "barber",
+    "city": "Панҷакент",
+    "photos": [
+      "/uploads/1769665205950.jpg",
+      "/uploads/1769665205974.jpg",
+      "/uploads/1769665205990.jpg"
+    ],
+    "userId": 1769607008937,
+    "booking": true,
+    "time": 1769665218066,
+    "views": 2
+  },
+  {
+    "id": 1769686279561,
+    "title": "Hshdhe",
+    "price": "Bsdhs",
+    "phone": "Gshs",
+    "desc": "Hshd",
+    "category": "Телефон",
+    "city": "Конибодом",
+    "photos": [
+      "/uploads/1769686274171.jpg"
+    ],
+    "userId": 1769607008937,
+    "booking": false,
+    "time": 1769686279561,
+    "views": 14,
+    "likedBy": [
+      1769607008937
+    ],
+    "likes": 1
+  },
+  {
+    "id": 1769686280434,
+    "title": "Hshdhe",
+    "price": "Bsdhs",
+    "phone": "Gshs",
+    "desc": "Hshd",
+    "category": "Телефон",
+    "city": "Конибодом",
+    "photos": [
+      "/uploads/1769686276069.jpg"
+    ],
+    "userId": 1769607008937,
+    "booking": false,
+    "time": 1769686280434,
+    "views": 13,
+    "likedBy": [
+      1769607178764
+    ],
+    "likes": 1
+  },
+  {
+    "id": 1769751175494,
+    "title": "Vgff",
+    "price": "100",
+    "phone": "Gfd",
+    "desc": "Cc",
+    "category": "Мотоцикл",
+    "city": "Конибодом",
+    "photos": [
+      "/uploads/1769751171532.jpg"
+    ],
+    "userId": 1769607008937,
+    "booking": false,
+    "time": 1769751175494,
+    "likes": 1,
+    "views": 1
+  },
+  {
+    "id": 1769751249451,
+    "title": "Vcxdd",
+    "price": "79800",
+    "phone": "Cf",
+    "desc": "Vc",
+    "category": "Телефон",
+    "city": "Конибодом",
+    "photos": [
+      "/uploads/1769751240629.jpg"
+    ],
+    "userId": 1769607008937,
+    "booking": false,
+    "time": 1769751249451,
+    "views": 32,
+    "likedBy": [
+      1769607008937,
+      1769607178764
+    ],
+    "likes": 2
+  },
+  {
+    "id": 1769773675780,
+    "title": "Самсунг",
+    "price": "500",
+    "phone": "123545",
+    "desc": "Hgxfgghkigg",
+    "category": "Телефон",
+    "city": "Конибодом",
+    "photos": [
+      "/uploads/1769773663325.jpg"
+    ],
+    "userId": 1769607178764,
+    "booking": false,
+    "time": 1769773675780,
+    "views": 1
+  },
+  {
+    "id": 1769773682017,
+    "title": "Самсунг",
+    "price": "500",
+    "phone": "123545",
+    "desc": "Hgxfgghkigg",
+    "category": "Телефон",
+    "city": "Конибодом",
+    "photos": [
+      "/uploads/1769773668185.jpg"
+    ],
+    "userId": 1769607178764,
+    "booking": false,
+    "time": 1769773682017,
+    "views": 1
+  }
+]

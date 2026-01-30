@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="tj">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+
+<title>Иловаи Брон</title>
+
+<style>
+
+body{
+ margin:0;
+ font-family:system-ui;
+ background:#f2f4f8;
+}
+
+.top{
+ background:#27ae60;
+ color:white;
+ padding:15px;
+ text-align:center;
+ font-weight:bold;
+ font-size:18px;
+}
+
+.card{
+ background:white;
+ margin:15px;
+ padding:16px;
+ border-radius:16px;
+ box-shadow:0 4px 12px rgba(0,0,0,.1);
+}
+
+input,select,textarea{
+ width:100%;
+ padding:12px;
+ margin-top:10px;
+ border-radius:12px;
+ border:1px solid #ddd;
+}
+
+button{
+ width:100%;
+ margin-top:15px;
+ padding:14px;
+ border:none;
+ border-radius:14px;
+ background:#27ae60;
+ color:white;
+ font-weight:bold;
+ font-size:16px;
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="top">📅 Иловаи эълони брон</div>
+
+<div class="card">
+
+<form action="/add-ad" method="POST" enctype="multipart/form-data">
+
+<input name="title" placeholder="Номи объект" required>
+
+<input name="price" placeholder="Нарх барои 1 соат" required>
+
+<input name="phone" placeholder="Телефон (Одатӣ)" required>
+
+<input name="whatsapp"
+ placeholder="WhatsApp (+992xxxxxxxxx)"
+ required>
+
+<textarea name="desc" placeholder="Тавсиф"></textarea>
+
+<!-- CITY -->
+
+<select id="cityFilter" name="city" required>
+<option value="">Ҳамаи шаҳрҳо ва ноҳияҳо</option>          
+<option>Душанбе</option>
+<option>Хуҷанд</option>
+<option>Бохтар</option>
+<option>Кӯлоб</option>
+<option>Истаравшан</option>
+<option>Панҷакент</option>
+<option>Турсунзода</option>
+<option>Исфара</option>
+<option>Конибодом</option>
+<option>Гулистон</option>
+<option>Ваҳдат</option>
+<option>Роғун</option>
+<option>Норак</option>
+<option>Ҳисор</option>
+
+<option>Ашт</option>
+<option>Бобоҷон Ғафуров</option>
+<option>Деваштич</option>
+<option>Зафаробод</option>
+<option>Исмоили Сомонӣ</option>
+<option>Ҷаббор Расулов</option>
+<option>Кӯҳистони Мастчоҳ</option>
+<option>Мастчоҳ</option>
+<option>Спитамен</option>
+<option>Шаҳристон</option>
+
+<option>Балҷувон</option>
+<option>Вахш</option>
+<option>Восеъ</option>
+<option>Данғара</option>                                   <option>Дӯстӣ</option>
+<option>Ҷалолиддини Балхӣ</option>
+<option>Ҷайҳун</option>
+<option>Қабодиён</option>
+<option>Кӯшониён</option>
+<option>Левакант</option>
+<option>Муъминобод</option>
+<option>Панҷ</option>
+<option>Темурмалик</option>
+<option>Фархор</option>
+<option>Ховалинг</option>
+<option>Шамсиддин Шоҳин</option>
+
+<option>Дарвоз</option>
+<option>Ишкошим</option>
+<option>Мурғоб</option>
+<option>Роштқалъа</option>
+<option>Рӯшон</option>
+<option>Шуғнон</option>
+<option>Ванҷ</option>
+
+</select>
+
+<!-- BOOKING CATEGORY -->
+
+<select id="cat" name="category" required>
+<option value="">Категория</option>
+<option value="sport">⚽ Майдони варзиш</option>
+<option value="billiard">🎱 Билярд</option>
+<option value="cs">🎮 Counter Strike</option>
+<option value="barber">💈 Сартарошхона</option>
+<option value="food">🍽 Тарабхона</option>
+</select>
+
+<!-- SUB CATEGORY -->
+
+<select id="sub" name="sub" style="display:none"></select>
+
+<!-- PHOTOS -->
+
+<input type="file" name="photos" multiple required>
+
+<!-- BOOKING FLAG -->
+
+<input type="hidden" name="booking" value="true">
+
+<button>📤 Сабт кардани брон</button>
+
+</form>
+
+</div>
+
+<script>
+
+const cat = document.getElementById("cat");
+const sub = document.getElementById("sub");
+
+const SUBS = {
+
+ sport:["Футбол","Мини футбол","Теннис","Баскетбол"],
+
+ billiard:["Русский","Американка","VIP"],
+
+ cs:["PC Zone","Playstation","VR"],
+
+ barber:["Мардона","Занона","VIP"],
+
+ food:["Кафе","Ресторан","Фастфуд"]
+
+};
+
+cat.onchange = ()=>{
+
+ const val = cat.value;
+
+ if(!SUBS[val]){
+  sub.style.display="none";
+  return;
+ }
+
+ sub.style.display="block";
+ sub.innerHTML="";
+
+ SUBS[val].forEach(x=>{
+  let o=document.createElement("option");
+  o.value=x;
+  o.textContent=x;
+  sub.appendChild(o);
+ });
+
+};
+
+</script>
+
+</body>
+</html>

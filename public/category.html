@@ -1,0 +1,843 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Category | СУРХ</title>
+
+<style>
+
+:root{
+ --p:#2563eb;
+ --a:#ff4757;
+ --bg:#f2f4f8;
+ --card:#fff;
+ --radius:18px;
+ --shadow:0 10px 25px rgba(0,0,0,.12);
+}
+
+/* RESET */
+
+*{
+ box-sizing:border-box;
+ margin:0;
+ padding:0;
+ font-family:system-ui;
+}
+
+body{
+ background:var(--bg);
+ padding-bottom:90px;
+}
+
+/* HEADER */
+
+.header{
+ position:sticky;
+ top:0;
+ z-index:999;
+ background:white;
+ padding:14px;
+ display:flex;
+ align-items:center;
+ justify-content:space-between;
+ box-shadow:0 4px 12px rgba(0,0,0,.06);
+}
+
+.back-btn{
+ font-size:22px;
+ cursor:pointer;
+}
+
+.title{
+ font-weight:900;
+ font-size:16px;
+}
+
+/* ADS GRID */
+
+.ads{
+ padding:12px;
+ display:grid;
+ grid-template-columns:repeat(auto-fill,minmax(160px,1fr));
+ gap:12px;
+}
+
+/* CARD */
+
+.ad-card{
+ background:white;
+ border-radius:18px;
+ overflow:hidden;
+ box-shadow:var(--shadow);
+ position:relative;
+}
+
+.ad-card:active{
+ transform:scale(.97);
+}
+
+/* IMAGE */
+
+.ad-card img{
+ width:100%;
+ height:160px;
+ object-fit:cover;
+}
+
+/* INFO */
+
+.ad-info{
+ padding:10px;
+}
+
+.ad-price{
+ font-weight:900;
+ color:#16a34a;
+}
+
+.ad-title{
+ font-size:14px;
+ font-weight:700;
+ margin-top:4px;
+}
+
+.ad-city{
+ font-size:12px;
+ opacity:.7;
+}
+
+/* LIKE */
+
+.like-btn{
+ position:absolute;
+ top:10px;
+ right:10px;
+ width:34px;
+ height:34px;
+ background:white;
+ border-radius:50%;
+ display:flex;
+ align-items:center;
+ justify-content:center;
+ box-shadow:0 4px 12px rgba(0,0,0,.2);
+}
+
+.like-btn.active{
+ background:var(--a);
+ color:white;
+}
+
+/* EMPTY */
+
+.empty{
+ padding:30px;
+ text-align:center;
+ opacity:.7;
+}
+
+/* SKELETON */
+
+.skeleton{
+ height:160px;
+ border-radius:18px;
+ background:linear-gradient(90deg,#eee,#f5f5f5,#eee);
+ background-size:200% 100%;
+ animation:skeleton 1.2s infinite;
+}
+
+@keyframes skeleton{
+ 0%{background-position:0%}
+ 100%{background-position:200%}
+}
+
+/* FILTER BAR */
+
+.filter-bar{
+ display:flex;
+ gap:10px;
+ padding:10px;
+ background:#fff;
+ border-radius:16px;
+ box-shadow:0 8px 20px rgba(0,0,0,.08);
+ margin:10px;
+}
+
+/* SELECT + INPUT */
+
+.filter-bar select,
+.filter-bar input{
+ flex:1;
+ padding:12px 14px;
+ border:none;
+ outline:none;
+ border-radius:12px;
+ font-size:14px;
+ background:#f6f7fb;
+ box-shadow: inset 0 2px 6px rgba(0,0,0,.06);
+}
+
+/* PLACEHOLDER COLOR */
+
+.filter-bar input::placeholder{
+ color:#999;
+}
+
+/* ACTIVE EFFECT */
+
+.filter-bar select:focus,
+.filter-bar input:focus{
+ background:#fff;
+ box-shadow:0 0 0 2px rgba(37,99,235,.2);
+}
+
+@media (max-width: 600px){
+
+ .filter-bar{
+  flex-direction:column;
+ }
+
+ .filter-bar select,
+ .filter-bar input{
+  width:100%;
+ }
+}
+
+.filter-bar{
+ flex-wrap:wrap;
+}
+
+.price-row{
+ display:flex;
+ gap:8px;
+ width:100%;
+}
+
+.price-row input{
+ flex:1;
+}
+
+@media(max-width:600px){
+
+ .filter-bar{
+  flex-direction:column;
+ }
+
+}
+
+.tabs{
+ display:flex;
+ position:sticky;
+ position:relative;
+ top:58px;
+ z-index:999;
+ background:white;
+ margin:10px;
+ border-radius:14px;
+ overflow:hidden;
+}
+
+.tab{
+ flex:1;
+ text-align:center;
+ padding:12px 0;
+ font-weight:700;
+ color:#aaa;
+ cursor:pointer;
+}
+
+.tab.active{
+ color:#000;
+}
+
+.tab-line{
+ position:absolute;
+ bottom:0;
+ left:0;
+ width:33.33%;
+ height:3px;
+ background:#2563eb;
+ transition:.25s;
+}
+
+.ad-time{
+ font-size:11px;
+ opacity:.6;
+ margin-top:4px;
+}
+
+</style>
+</head>
+
+<body>
+
+<!-- HEADER -->
+
+<div class="header">
+
+ <div class="back-btn" onclick="history.back()">⬅</div>
+
+ <div class="title" id="catTitle">Category</div>
+
+ <div style="display:flex;gap:6px">
+  <button onclick="setLang('tj')">TJ</button>
+  <button onclick="setLang('ru')">RU</button>
+ </div>
+
+</div>
+
+<div class="tabs">
+
+ <div class="tab active" onclick="setTab(this,'new')">Новый</div>
+ <div class="tab" onclick="setTab(this,'popular')">Популярный</div>
+ <div class="tab" onclick="setTab(this,'top')">Топ</div>
+
+ <div class="tab-line"></div>
+
+</div>
+
+<!-- PRO FILTER BAR -->
+<div class="filter-bar">
+
+ <!-- SUB CATEGORY -->
+ <select id="subSelect"></select>
+
+ <!-- CITY -->
+ <select id="citySelect">
+  <option value="" data-key="city"></option> 
+
+<option value="Душанбе">Душанбе</option>
+<option value="Ҳисор">Ҳисор</option>
+<option value="Турсунзода">Турсунзода</option>
+<option value="Ваҳдат">Ваҳдат</option>
+<option value="Роғун">Роғун</option>
+
+<option value="Хуҷанд">Хуҷанд</option>
+<option value="Истаравшан">Истаравшан</option>
+<option value="Панҷакент">Панҷакент</option>
+<option value="Конибодом">Конибодом</option>
+<option value="Исфара">Исфара</option>
+<option value="Гулистон">Гулистон</option>
+<option value="Бӯстон">Бӯстон</option>
+
+<option value="Бохтар">Бохтар</option>
+<option value="Дӯстӣ">Дӯстӣ</option>
+<option value="Кӯлоб">Кӯлоб</option>
+<option value="Левакант">Левакант</option>
+<option value="Норак">Норак</option>
+<option value="Ёвон">Ёвон</option>
+<option value="Вахш">Вахш</option>
+<option value="Кушониён">Кушониён</option>
+<option value="Ҷайҳун">Ҷайҳун</option>
+<option value="Ҷалолиддини Балхӣ">Ҷалолиддини Балхӣ</option>
+<option value="Қубодиён">Қубодиён</option>
+<option value="Шаҳритус">Шаҳритус</option>
+<option value="Фархор">Фархор</option>
+<option value="Данғара">Данғара</option>
+<option value="Восеъ">Восеъ</option>
+<option value="Темурмалик">Темурмалик</option>
+<option value="Ховалинг">Ховалинг</option>
+<option value="Муъминобод">Муъминобод</option>
+<option value="Панҷ">Панҷ</option>
+
+<option value="Хоруғ">Хоруғ</option>
+<option value="Рӯшон">Рӯшон</option>
+<option value="Шуғнон">Шуғнон</option>
+<option value="Ишкошим">Ишкошим</option>
+<option value="Мурғоб">Мурғоб</option>
+<option value="Ванҷ">Ванҷ</option>                         <option value="Дарвоз">Дарвоз</option>
+
+<option value="Рашт">Рашт</option>
+<option value="Тоҷикобод">Тоҷикобод</option>
+<option value="Лахш">Лахш</option>
+<option value="Нуробод">Нуробод</option>
+<option value="Сангвор">Сангвор</option>
+<option value="Файзобод">Файзобод</option>
+
+</select>
+
+<!-- PRICE -->
+ <div class="price-row">
+  <input type="number" id="minPrice" data-key-placeholder="price_from">
+  <input type="number" id="maxPrice" data-key-placeholder="price_to">
+ </div>
+
+<!-- SEARCH -->
+ <input type="text" id="searchInput" data-key-placeholder="search">
+
+</div>
+
+<!-- ADS -->
+
+<div id="ads" class="ads"></div>
+
+<script>
+
+let USER_ID = null;
+
+fetch("/api/me")
+.then(r=>r.json())
+.then(me=>{
+ if(me) USER_ID = me.id;
+});
+
+/* ================= GET CATEGORY ================= */
+
+const urlParams = new URLSearchParams(window.location.search);
+const CURRENT_CATEGORY = urlParams.get("cat");
+
+const SUBS = {
+
+ /* ================= REAL ESTATE ================= */
+
+ Квартира:[
+  {id:"all", tj:"Ҳама", ru:"Все"},
+  {id:"1room", tj:"1 ҳуҷра", ru:"1 комната"},
+  {id:"2room", tj:"2 ҳуҷра", ru:"2 комнаты"},
+  {id:"3room", tj:"3 ҳуҷра", ru:"3 комнаты"},
+  {id:"new", tj:"Навсохт", ru:"Новостройка"},
+  {id:"secondary", tj:"Дуюмдараҷа", ru:"Вторичка"}
+ ],
+
+ Хона:[
+  {id:"all", tj:"Ҳама", ru:"Все"},
+  {id:"yard", tj:"Ҳавлидор", ru:"Частный дом"},
+  {id:"villa", tj:"Вилла", ru:"Вилла"},
+  {id:"dacha", tj:"Дача", ru:"Дача"}
+ ],
+
+ Иҷора:[
+  {id:"all", tj:"Ҳама", ru:"Все"},
+  {id:"daily", tj:"Рӯзона", ru:"Посуточно"},
+  {id:"monthly", tj:"Моҳона", ru:"Помесячно"},
+  {id:"long", tj:"Дарозмуддат", ru:"Долгосрочно"}
+ ],
+
+ Дӯкон:[
+  {id:"all", tj:"Ҳама", ru:"Все"},
+  {id:"market", tj:"Бозор", ru:"Рынок"},
+  {id:"office", tj:"Офис", ru:"Офис"},
+  {id:"warehouse", tj:"Анбор", ru:"Склад"}
+ ],
+
+ /* ================= TRANSPORT ================= */
+
+ Мошин:[
+  {id:"all", tj:"Ҳама", ru:"Все"},
+  {id:"sedan", tj:"Седан", ru:"Седан"},
+  {id:"suv", tj:"Ҷип", ru:"Внедорожник"},
+  {id:"hatchback", tj:"Хэтчбек", ru:"Хэтчбек"},
+  {id:"electric", tj:"Электро", ru:"Электро"},
+  {id:"truck", tj:"Боркаш", ru:"Грузовой"}
+ ],
+
+ Мотоцикл:[
+  {id:"all", tj:"Ҳама", ru:"Все"},
+  {id:"sport", tj:"Спорт", ru:"Спорт"},
+  {id:"classic", tj:"Классик", ru:"Классика"},
+  {id:"enduro", tj:"Эндуро", ru:"Эндуро"}
+ ],
+
+ Скутер:[
+  {id:"all", tj:"Ҳама", ru:"Все"},
+  {id:"electric", tj:"Электро", ru:"Электро"},
+  {id:"petrol", tj:"Бензин", ru:"Бензин"}
+ ],
+
+ Велосипед:[
+  {id:"all", tj:"Ҳама", ru:"Все"},
+  {id:"mountain", tj:"Кӯҳӣ", ru:"Горный"},
+  {id:"city", tj:"Шаҳрӣ", ru:"Городской"},
+  {id:"kids", tj:"Кӯдакона", ru:"Детский"}
+ ],
+
+ /* ================= TECH ================= */
+
+ Телефон:[
+  {id:"all", tj:"Ҳама", ru:"Все"},
+  {id:"iphone", tj:"iPhone", ru:"iPhone"},
+  {id:"samsung", tj:"Samsung", ru:"Samsung"},
+  {id:"xiaomi", tj:"Xiaomi", ru:"Xiaomi"},
+  {id:"other", tj:"Дигар", ru:"Другие"}
+ ],
+
+ Компютер:[
+  {id:"all", tj:"Ҳама", ru:"Все"},
+  {id:"office", tj:"Офисӣ", ru:"Офисный"},
+  {id:"gaming", tj:"Геймерӣ", ru:"Игровой"},
+  {id:"mini", tj:"Mini PC", ru:"Mini PC"}
+ ],
+
+ Ноутбук:[
+  {id:"all", tj:"Ҳама", ru:"Все"},
+  {id:"gaming", tj:"Геймерӣ", ru:"Игровой"},
+  {id:"office", tj:"Корӣ", ru:"Рабочий"},
+  {id:"ultrabook", tj:"Ultrabook", ru:"Ультрабук"}
+ ],
+
+ Телевизор:[
+  {id:"all", tj:"Ҳама", ru:"Все"},
+  {id:"smart", tj:"Smart TV", ru:"Smart TV"},
+  {id:"4k", tj:"4K", ru:"4K"},
+  {id:"oled", tj:"OLED", ru:"OLED"}
+ ],
+
+ /* ================= JOB ================= */
+
+ Кор:[
+  {id:"all", tj:"Ҳама", ru:"Все"},
+  {id:"office", tj:"Офис", ru:"Офис"},
+  {id:"driver", tj:"Ронанда", ru:"Водитель"},
+  {id:"builder", tj:"Сохтмон", ru:"Строительство"},
+  {id:"remote", tj:"Онлайн", ru:"Удалёнка"}
+ ],
+
+ Хизмат:[
+  {id:"all", tj:"Ҳама", ru:"Все"},
+  {id:"repair", tj:"Таъмир", ru:"Ремонт"},
+  {id:"cleaning", tj:"Тозакунӣ", ru:"Уборка"},
+  {id:"it", tj:"IT хизмат", ru:"IT услуги"}
+ ],
+
+ Таксӣ:[
+  {id:"all", tj:"Ҳама", ru:"Все"},
+  {id:"city", tj:"Шаҳрӣ", ru:"Город"},
+  {id:"intercity", tj:"Байнишаҳрӣ", ru:"Межгород"}
+ ],
+
+ Курьер:[
+  {id:"all", tj:"Ҳама", ru:"Все"},
+  {id:"food", tj:"Хӯрок", ru:"Еда"},
+  {id:"documents", tj:"Ҳуҷҷат", ru:"Документы"}
+ ],
+
+ /* ================= HOME ================= */
+
+ Мебел:[
+  {id:"all", tj:"Ҳама", ru:"Все"},
+  {id:"sofa", tj:"Диван", ru:"Диван"},
+  {id:"bed", tj:"Кат", ru:"Кровать"},
+  {id:"table", tj:"Миз", ru:"Стол"}
+ ],
+
+ "Асбоби хона":[
+  {id:"all", tj:"Ҳама", ru:"Все"},
+  {id:"gas", tj:"Газплита", ru:"Газплита"},
+  {id:"microwave", tj:"Микроволновка", ru:"Микроволновка"},
+  {id:"blender", tj:"Блендер", ru:"Блендер"}
+ ],
+
+ Кондиционер:[
+  {id:"all", tj:"Ҳама", ru:"Все"},
+  {id:"inverter", tj:"Инвертор", ru:"Инвертор"},
+  {id:"split", tj:"Сплит", ru:"Сплит"}
+ ],
+
+ Холодилник:[
+  {id:"all", tj:"Ҳама", ru:"Все"},
+  {id:"double", tj:"Дукамера", ru:"Двухкамерный"},
+  {id:"mini", tj:"Мини", ru:"Мини"}
+ ],
+
+ /* ================= OTHER ================= */
+
+ Либос:[
+  {id:"all", tj:"Ҳама", ru:"Все"},
+  {id:"men", tj:"Мардона", ru:"Мужская"},
+  {id:"women", tj:"Занона", ru:"Женская"},
+  {id:"kids", tj:"Кӯдакона", ru:"Детская"}
+ ],
+
+ Ҳайвонот:[
+  {id:"all", tj:"Ҳама", ru:"Все"},
+  {id:"dog", tj:"Саг", ru:"Собаки"},
+  {id:"cat", tj:"Гурба", ru:"Кошки"},
+  {id:"birds", tj:"Паранда", ru:"Птицы"}
+ ],
+
+ Китоб:[
+  {id:"all", tj:"Ҳама", ru:"Все"},
+  {id:"school", tj:"Мактабӣ", ru:"Школьные"},
+  {id:"novel", tj:"Роман", ru:"Романы"},
+  {id:"religion", tj:"Динӣ", ru:"Религия"}
+ ]
+
+};
+
+/* ================= TITLE ================= */
+
+document.getElementById("catTitle").innerText = CURRENT_CATEGORY || "Category";
+
+/* ================= ELEMENTS ================= */
+
+const adsBox   = document.getElementById("ads");
+const citySel  = document.getElementById("citySelect");
+const searchIn = document.getElementById("searchInput");
+const subSel   = document.getElementById("subSelect");
+const minPriceInp = document.getElementById("minPrice");
+const maxPriceInp = document.getElementById("maxPrice");
+
+/* ================= SUB LOADER ================= */
+
+function loadSubs(){
+
+ if(!SUBS[CURRENT_CATEGORY]){
+  subSel.style.display = "none";
+  return;
+ }
+
+ const lang = localStorage.getItem("lang") || "tj";
+
+ subSel.innerHTML = "";
+
+ SUBS[CURRENT_CATEGORY].forEach(s=>{
+
+  const opt = document.createElement("option");
+  opt.value = s.id;
+  opt.textContent = s[lang];
+
+  subSel.appendChild(opt);
+
+ });
+
+}
+
+/* CALL AFTER ELEMENTS */
+loadSubs();
+
+/* ================= STORAGE ================= */
+
+let likes = JSON.parse(localStorage.getItem("likes")) || {};
+let favs  = JSON.parse(localStorage.getItem("favs")) || [];
+
+
+
+/* ================= SKELETON ================= */
+
+function showSkeleton(){
+
+ adsBox.innerHTML = `
+  <div class="skeleton"></div>
+  <div class="skeleton"></div>
+  <div class="skeleton"></div>
+  <div class="skeleton"></div>
+ `;
+}
+
+showSkeleton();
+
+/* ================= LOAD ADS ================= */
+
+let ALL_ADS = [];
+let CURRENT_TAB = "new";
+
+fetch("/api/normal-ads")
+.then(r=>r.json())
+.then(data=>{
+
+ ALL_ADS = data.filter(a => a.category === CURRENT_CATEGORY);
+
+ renderFiltered();
+
+});
+
+/* ================= FILTER ================= */
+
+function renderFiltered(){
+
+ let result = [...ALL_ADS];
+
+ // CITY
+ const city = citySel.value;
+ if(city){
+  result = result.filter(a=>a.city === city);
+ }
+
+ // SEARCH
+ const search = searchIn.value.toLowerCase();
+ if(search){
+  result = result.filter(a =>
+   a.title.toLowerCase().includes(search)
+  );
+ }
+
+ // TAB SORT
+ if(CURRENT_TAB==="new"){
+  result.sort((a,b)=>b.id-a.id);
+ }
+
+ if(CURRENT_TAB==="popular"){
+  result.sort((a,b)=>(b.views||0)-(a.views||0));
+ }
+
+ if(CURRENT_TAB==="top"){
+  result.sort((a,b)=>(b.likes||0)-(a.likes||0));
+ }
+
+ adsBox.innerHTML="";
+
+ if(!result.length){
+  adsBox.innerHTML="<p class='empty'>Эълон нест ❌</p>";
+  return;
+ }
+
+ result.forEach(renderAd);
+}
+
+/* ================= EVENTS ================= */
+
+citySel.addEventListener("change",renderFiltered);
+
+minPriceInp.addEventListener("input",renderFiltered);
+maxPriceInp.addEventListener("input",renderFiltered);
+
+let typingTimer;
+
+searchIn.addEventListener("input",()=>{
+ clearTimeout(typingTimer);
+ typingTimer = setTimeout(renderFiltered,300);
+});
+
+/* ================= RENDER CARD ================= */
+
+function renderAd(ad){
+
+ const card = document.createElement("div");
+ card.className = "ad-card";
+
+ card.onclick = ()=>location="/ad.html?id=" + ad.id;
+
+ const img = ad.photos?.[0] || "/noimage.png";
+
+ card.innerHTML = `
+
+ <div class="like-btn ${ad.likedBy?.includes(USER_ID) ? "active" : ""}
+  onclick="event.stopPropagation();toggleLike(${ad.id},this)">
+  ❤️
+ </div>
+
+ <img src="${img}">
+
+ <div class="ad-info">
+  <div class="ad-price">💰 ${ad.price}</div>
+  <div class="ad-title">${ad.title}</div>
+  <div class="ad-city">📍 ${ad.city}</div>
+  <div class="ad-time">🕒 ${formatDate(ad.time)}</div>
+ </div>
+ `;
+
+ adsBox.appendChild(card);
+
+}
+
+/* ================= LIKE ================= */
+
+function toggleLike(id,btn){
+
+ fetch("/api/like",{
+  method:"POST",
+  headers:{
+   "Content-Type":"application/json"
+  },
+  body:JSON.stringify({ adId:id })
+ })
+ .then(r=>r.json())
+ .then(data=>{
+
+  if(!data.success){
+   alert("Шумо аллакай лайк мондаед ❤️");
+   return;
+  }
+
+  btn.classList.add("active");
+
+ });
+}
+
+/* ================= LANG ================= */
+
+const translations = {
+
+ tj:{
+  city:"Ҳамаи шаҳрҳо",
+  search:"Ҷустуҷӯ...",
+  no_ads:"Эълон нест",
+  price_from:"Аз",
+  price_to:"То"
+ },
+
+ ru:{
+  city:"Все города",
+  search:"Поиск...",
+  no_ads:"Объявлений нет",
+  price_from:"От",
+  price_to:"До"
+ }
+
+
+
+};
+
+function setLang(lang){
+ localStorage.setItem("lang",lang);
+ applyLang();
+ loadSubs(); // <<< ИН ХАТТ МУҲИМ АСТ
+}
+
+function applyLang(){
+
+ const lang = localStorage.getItem("lang") || "tj";
+
+ document.querySelectorAll("[data-key]").forEach(el=>{
+  const k = el.dataset.key;
+  if(translations[lang][k]) el.innerText = translations[lang][k];
+ });
+
+ document.querySelectorAll("[data-key-placeholder]").forEach(el=>{
+  const k = el.dataset.keyPlaceholder;
+  if(translations[lang][k]) el.placeholder = translations[lang][k];
+ });
+
+}
+
+applyLang();
+
+subSel.addEventListener("change",renderFiltered);
+
+function setTab(el,type){
+
+ CURRENT_TAB = type;
+
+ document.querySelectorAll(".tab").forEach(t=>{
+  t.classList.remove("active");
+ });
+
+ el.classList.add("active");
+
+ const line = document.querySelector(".tab-line");
+
+ if(type==="new") line.style.left="0%";
+ if(type==="popular") line.style.left="33.33%";
+ if(type==="top") line.style.left="66.66%";
+
+ renderFiltered();
+}
+
+function formatDate(ts){
+
+ if(!ts) return "";
+
+ const d = new Date(ts);
+
+ const day = d.getDate().toString().padStart(2,"0");
+ const month = (d.getMonth()+1).toString().padStart(2,"0");
+ const year = d.getFullYear();
+
+ return day+"."+month+"."+year;
+}
+
+</script>
+
+</body>
+</html>

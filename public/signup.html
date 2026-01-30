@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Registration</title>
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+
+body{
+ margin:0;
+ background:#f2f4f8;
+ font-family:system-ui;
+}
+
+.box{
+ background:#fff;
+ max-width:420px;
+ margin:30px auto;
+ padding:20px;
+ border-radius:16px;
+ box-shadow:0 5px 20px rgba(0,0,0,.12);
+}
+
+h2{
+ text-align:center;
+ margin-bottom:15px;
+}
+
+input,select{
+ width:100%;
+ padding:12px;
+ margin-top:10px;
+ border-radius:12px;
+ border:1px solid #ddd;
+ font-size:15px;
+}
+
+input.error{
+ border:2px solid red;
+}
+
+input.ok{
+ border:2px solid #22c55e;
+}
+
+.small{
+ font-size:13px;
+ margin-top:5px;
+}
+
+.red{color:red}
+.green{color:#22c55e}
+
+.row{
+ display:flex;
+ gap:8px;
+}
+
+button{
+ width:100%;
+ padding:14px;
+ margin-top:16px;
+ border:none;
+ border-radius:14px;
+ background:#2563eb;
+ color:white;
+ font-size:16px;
+ font-weight:700;
+ cursor:pointer;
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="box">
+
+<h2>Пур кардани профил</h2>
+
+<input id="fname" placeholder="Ном">
+
+<input id="lname" placeholder="Насаб">
+
+<input id="username" placeholder="Номи корбар (username)">
+<div id="userStatus" class="small"></div>
+
+<select id="city">
+ <option value="">Шаҳр ё ноҳия</option>
+ <option value="Душанбе">Душанбе</option>
+ <option value="Хуҷанд">Хуҷанд</option>
+ <option value="Бохтар">Бохтар</option>
+ <option value="Кӯлоб">Кӯлоб</option>
+ <option value="Ҳисор">Ҳисор</option>
+</select>
+
+<!-- BIRTH -->
+
+<div class="row">
+
+ <select id="day">
+  <option value="">Рӯз</option>
+ </select>
+
+ <select id="month">
+  <option value="">Моҳ</option>
+  <option>01</option><option>02</option><option>03</option>
+  <option>04</option><option>05</option><option>06</option>
+  <option>07</option><option>08</option><option>09</option>
+  <option>10</option><option>11</option><option>12</option>
+ </select>
+
+ <select id="year">
+  <option value="">Сол</option>
+ </select>
+
+</div>
+
+<button onclick="saveProfile()">Сабт кардан</button>
+
+</div>
+
+
+<script type="module">
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getAuth } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
+import {
+ getFirestore,
+ doc,
+ updateDoc,
+ collection,
+ query,
+ where,
+ getDocs
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+
+// FIREBASE CONFIG
+const firebaseConfig = {
+ apiKey: "AIzaSyD678JabDd5N-kcAme_lYxr867IhFC_peo",
+ authDomain: "surh-40611.firebaseapp.com",
+ projectId: "surh-40611"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+
+// DATE GENERATE
+
+for(let i=1;i<=31;i++){
+ day.innerHTML += `<option>${i}</option>`;
+}
+
+for(let y=1950;y<=2010;y++){
+ year.innerHTML += `<option>${y}</option>`;
+}
+
+
+// USERNAME CHECK
+
+let usernameFree = false;
+
+username.addEventListener("input", checkUsername);
+
+async function checkUsername(){
+
+ const name = username.value.trim().toLowerCase();
+
+ if(name.length < 3){
+  userStatus.textContent = "Ҳадди ақал 3 ҳарф";
+  userStatus.className="small red";
+  username.className="error";
+  usernameFree=false;
+  return;
+ }
+
+ const q = query(
+  collection(db,"users"),
+  where("username","==",name)
+ );
+
+ const snap = await getDocs(q);
+
+ if(snap.empty){
+
+  userStatus.textContent="Озод аст ✓";
+  userStatus.className="small green";
+  username.className="ok";
+  usernameFree=true;
+
+ }else{
+
+  userStatus.textContent="Ин ном аллакай истифода шудааст ❌";
+  userStatus.className="small red";
+  username.className="error";
+  usernameFree=false;
+
+ }
+
+}
+
+import { onAuthStateChanged } from 
+"https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
+import { getDoc, doc } from 
+"https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+onAuthStateChanged(auth, async(user)=>{
+
+ if(!user){
+  // Агар login нест
+  window.location.href="login.html";
+  return;
+ }
+
+ const ref = doc(db,"users",user.uid);
+ const snap = await getDoc(ref);
+
+ if(!snap.exists()){
+  // Агар user doc нест
+  window.location.href="login.html";
+  return;
+ }
+
+ const data = snap.data();
+
+ if(data.completed === true){
+  // Агар аллакай регистрация кардааст
+  window.location.href="index.html";
+ }
+
+});
+
+// SAVE PROFILE
+
+window.saveProfile = async function(){
+
+ const user = auth.currentUser;
+
+ if(!user){
+  alert("Login нест");
+  return;
+ }
+
+ if(!usernameFree){
+  alert("Номи корбар банд аст");
+  return;
+ }
+
+ const data = {
+
+  fname: fname.value,
+  lname: lname.value,
+  username: username.value.toLowerCase(),
+  city: city.value,
+
+  birth:{
+   day: day.value,
+   month: month.value,
+   year: year.value
+  },
+
+  completed:true
+
+ };
+
+ await updateDoc(doc(db,"users",user.uid), data);
+
+ window.location.href="index.html";
+
+};
+
+</script>
+
+</body>
+</html>

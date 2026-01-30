@@ -1,0 +1,15 @@
+<h2>📜 Таърихи брон</h2>
+<div id="list"></div>
+
+<script>
+fetch("/api/my-booking-history")
+.then(r=>r.json())
+.then(d=>{
+ document.getElementById("list").innerHTML =
+ d.map(b=>`
+  <div>
+   ✔ ${b.date} | ${b.start}-${b.end}
+  </div>
+ `).join("");
+});
+</script>

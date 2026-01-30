@@ -1,0 +1,64 @@
+ if (!user) {
+   return res.send('Wrong login');
+ }
+
+ req.session.user = user;
+ res.redirect('/profile');
+
+});
+
+// PROFILE DATA
+app.get('/profile-data', (req, res) => {
+  if (!req.session.user) {
+    return res.json({ username: 'Guest' });
+  }
+
+  res.json({
+    username: req.session.user.username
+  });
+});
+
+// PROFILE PAGE
+app.get('/profile', (req, res) => {
+
+  if (!req.session.user) {
+    return res.redirect('/login.html');
+  }
+
+  res.sendFile(path.join(process.cwd(), 'public/profile.html'));
+
+});
+
+
+// LOGOUT
+app.get('/logout', (req, res) => {
+
+  req.session.destroy(() => {
+    res.redirect('/');
+  });
+
+});
+
+// ADD AD
+app.post('/add-ad', auth, upload.single('photo'), (req, res) => {
+
+  const ads = readAds();
+
+  ads.push({
+    id: Date.now(),
+    title: req.body.title,
+    price: req.body.price,
+    phone: req.body.phone,
+    desc: req.body.desc,
+    photo: req.file ? '/uploads/' + req.file.filename : null,
+    userId: req.session.user.id
+  });
+
+  writeAds(ads);
+
+  res.redirect('/profile');
+
+app.listen(PORT, () => {
+  console.log(`Server running on http://localhost:${PORT}`);
+});
+

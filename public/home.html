@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="tj">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Profile</title>
+
+<style>
+
+/* ===== RESET ===== */
+*{
+ box-sizing:border-box;
+ margin:0;
+ padding:0;
+ font-family:system-ui;
+}
+
+html,body{
+ height:100%;
+ background:radial-gradient(circle at top,#1a2a3a,#050b14);
+}
+
+/* ===== APP ===== */
+
+body{
+ display:flex;
+ justify-content:center;
+ overflow-x:hidden;
+ overflow-y:auto;
+}
+
+.app{
+ width:100%;
+ max-width:430px;
+ min-height:100vh;
+ background:transparent;
+ backdrop-filter:blur(12px);
+ position:relative;
+ overflow:auto;
+}
+
+/* ===== HEADER ===== */
+
+.top{
+ height:58px;
+ padding:0 14px;
+ display:flex;
+ align-items:center;
+ justify-content:space-between;
+
+ position:sticky;
+ top:0;
+ z-index:99;
+
+ background:rgba(10,20,35,.75);
+ backdrop-filter:blur(20px);
+
+ color:white;
+ font-weight:700;
+ border-bottom:1px solid rgba(255,255,255,.08);
+}
+
+.lang button{
+ background:rgba(255,255,255,.08);
+ color:white;
+ border:none;
+ padding:6px 12px;
+ border-radius:10px;
+ font-weight:600;
+}
+
+/* ===== PROFILE CARD ===== */
+
+.profile{
+ width:calc(100% - 20px);
+ margin:14px auto;
+ padding:18px;
+
+ background:rgba(255,255,255,.08);
+ backdrop-filter:blur(25px);
+
+ border-radius:22px;
+ text-align:center;
+
+ box-shadow:0 10px 30px rgba(0,0,0,.4);
+ border:1px solid rgba(255,255,255,.12);
+}
+
+/* ===== AVATAR ===== */
+
+.avatar{
+ width:90px;
+ height:90px;
+ border-radius:50%;
+ border:3px solid #4da3ff;
+ margin-bottom:10px;
+ background:#222;
+}
+
+/* ===== TEXT ===== */
+
+.profile h3{
+ color:white;
+ margin-bottom:6px;
+}
+
+.profile p{
+ color:#cfd8dc;
+ font-size:14px;
+ margin:4px 0;
+}
+
+/* ===== BUTTONS ===== */
+
+.btn{
+ width:100%;
+ margin-top:12px;
+ padding:14px;
+ border:none;
+ border-radius:16px;
+ font-size:15px;
+ font-weight:700;
+ color:white;
+
+ background:linear-gradient(135deg,#1e88ff,#3fa9ff);
+ box-shadow:0 6px 16px rgba(0,0,0,.4);
+}
+
+.green{
+ background:linear-gradient(135deg,#00c853,#64dd17);
+}
+
+/* ===== INPUT ===== */
+
+input{
+ width:100%;
+ padding:12px;
+ border-radius:14px;
+ border:none;
+ margin-top:10px;
+ background:rgba(255,255,255,.1);
+ color:white;
+ outline:none;
+}
+
+/* ===== LINKS ===== */
+
+a{
+ display:block;
+ margin-top:6px;
+ color:#64b5ff;
+ text-decoration:none;
+ font-weight:600;
+}
+
+/* ===== ADS GRID ===== */
+
+#adBox{
+ padding:12px;
+ padding-bottom:100px;
+ display:grid;
+ grid-template-columns:repeat(auto-fill,minmax(160px,1fr));
+ gap:10px;
+}
+
+/* ===== AD CARD ===== */
+
+.ad{
+ background:rgba(255,255,255,.08);
+ backdrop-filter:blur(20px);
+ border-radius:18px;
+ padding:8px;
+
+ box-shadow:0 6px 20px rgba(0,0,0,.35);
+ border:1px solid rgba(255,255,255,.1);
+}
+
+.ad img{
+ width:100%;
+ height:100px;
+ object-fit:cover;
+ border-radius:12px;
+}
+
+/* ===== FLOAT CHAT ===== */
+
+#floatChat{
+ position:fixed;
+ right:18px;
+ bottom:20px;
+
+ width:56px;
+ height:56px;
+ border-radius:50%;
+
+ background:linear-gradient(135deg,#00e676,#1de9b6);
+ color:white;
+ font-size:22px;
+
+ display:flex;
+ align-items:center;
+ justify-content:center;
+
+ box-shadow:0 10px 25px rgba(0,0,0,.5);
+ z-index:999;
+}
+
+/* ===== STATUS ===== */
+
+.confirmed{
+ color:#00e676;
+ font-weight:700;
+}
+
+.rejected{
+ color:#ff5252;
+ font-weight:700;
+}
+
+/* ===== 2 COLUMN BUTTON GRID ===== */
+
+.btnGrid{
+ display:grid;
+ grid-template-columns:1fr 1fr;
+ gap:12px;
+ margin-top:10px;
+}
+
+/* button full height align */
+
+.btn{
+ margin-top:0;
+ padding:14px 10px;
+ font-size:14px;
+ border-radius:16px;
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="app">
+
+<!-- ===== HEADER ===== -->
+
+<div class="top">
+ <span id="title">Профили ман</span>
+
+ <div class="lang">
+  <button onclick="setLang('tj')">TJ</button>
+  <button onclick="setLang('ru')">RU</button>
+ </div>
+</div>
+
+<!-- ===== PROFILE ===== -->
+
+<div class="profile">
+
+<img id="avatar" class="avatar" src="logo.png">
+
+<h3 id="username">...</h3>
+<p id="city"></p>
+<p id="year"></p>
+
+<div class="btnGrid">
+
+<button class="btn blue" onclick="goHome()">🏠 <span id="homeTxt">Саҳифаи асосӣ</span></button>
+
+<button class="btn blue" onclick="editProfile()">✏ <span id="editTxt">Таҳрири профил</span></button>
+
+<button class="btn green" onclick="addAd()">➕ <span id="addTxt">Иловаи эълон</span></button>
+
+<button class="btn green" onclick="addBooking()">📅 Иловаи брон</button>
+
+</div>
+
+<h3>Тасдиқи брон</h3>
+
+<input id="codeInput" placeholder="Коди брон">
+
+<button onclick="confirm()">Тасдиқ</button>
+
+<a href="/booking_requests.html">📩 Дархостҳои брон</a>
+<a href="/booking_active.html">✅ Бронҳои фаъол</a>
+<a href="/booking_history.html">📜 Таърихи брон</a>
+
+</div>
+
+<div id="confirmBox" style="
+display:none;
+position:fixed;
+inset:0;
+background:rgba(0,0,0,.5);
+z-index:9999;
+align-items:center;
+justify-content:center;
+">
+
+<div style="
+background:white;
+padding:20px;
+border-radius:16px;
+width:90%;
+max-width:320px;
+text-align:center;
+">
+
+<h3>📄 Тасдиқи брон</h3>
+
+<div id="confirmInfo"></div>
+
+<button onclick="approve()" style="
+margin-top:10px;
+width:100%;
+padding:12px;
+border:none;
+border-radius:10px;
+background:#27ae60;
+color:white;
+font-weight:700;
+">
+✅ Қабул
+</button>
+
+<button onclick="reject()" style="
+margin-top:8px;
+width:100%;
+padding:12px;
+border:none;
+border-radius:10px;
+background:#e74c3c;
+color:white;
+font-weight:700;
+">
+❌ Рад
+</button>
+
+</div>
+</div>
+
+<!-- ===== ADS ===== -->
+
+<div id="adBox"></div>
+
+<!-- ===== FLOAT CHAT ===== -->
+
+<div id="floatChat" onclick="openChats()">💬</div>
+
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+
+<script>
+
+/* ===== SOCKET ===== */
+
+const socket = io();
+const uid = localStorage.getItem("uid");
+socket.emit("join", uid);
+
+/* ===== LANGUAGE ===== */
+
+let lang = localStorage.getItem("lang") || "tj";
+
+const TXT={
+ tj:{
+  title:"Профили ман",
+  home:"Саҳифаи асосӣ",
+  edit:"Таҳрири профил",
+  add:"Иловаи эълон",
+  active:"🟢 ACTIVE",
+  sold:"🔴 SOLD",
+  min:"дақ"
+ },
+ ru:{
+  title:"Мой профиль",
+  home:"Главная",
+  edit:"Редактировать",
+  add:"Добавить объявление",
+  active:"🟢 АКТИВНО",
+  sold:"🔴 ПРОДАНО",
+  min:"мин"
+ }
+};
+
+function applyLang(){
+ title.innerText=TXT[lang].title;
+ homeTxt.innerText=TXT[lang].home;
+ editTxt.innerText=TXT[lang].edit;
+ addTxt.innerText=TXT[lang].add;
+}
+
+function setLang(l){
+ lang=l;
+ localStorage.setItem("lang",l);
+ applyLang();
+ renderAds();
+}
+
+applyLang();
+
+/* ===== PROFILE DATA ===== */
+
+fetch("/api/me")
+.then(r=>r.json())
+.then(u=>{
+
+ if(!u) location.href="/login.html";
+
+ username.innerText="Username: "+(u.username || u.name || "User");
+
+ city.innerText="Шаҳр: "+(u.city || "-");
+ year.innerText="Соли таваллуд: "+(u.birthyear || "-");
+
+ if(u.photo){
+  avatar.src=u.photo;
+ }
+
+});
+
+/* ===== ADS ===== */
+
+let ALL=[];
+
+fetch("/api/my-ads")
+.then(r=>r.json())
+.then(d=>{
+ ALL=d;
+ renderAds();
+});
+
+function timeAgo(t){
+ if(!t) return "";
+ let m=(Date.now()-t)/60000;
+ if(m<1) return "ҳозир";
+ return Math.floor(m)+" "+TXT[lang].min;
+}
+
+function renderAds(){
+
+ adBox.innerHTML="";
+
+ if(!ALL.length){
+  adBox.innerHTML="<center>Эълон нест</center>";
+  return;
+ }
+
+ ALL.forEach(ad=>{
+
+ adBox.innerHTML+=`
+
+<div class="ad" onclick="openItem(${ad.id}, ${ad.booking})">
+
+<div class="badge">${ad.category || "AD"}</div>
+
+<div class="status">
+${ad.status==="sold"?TXT[lang].sold:TXT[lang].active}
+</div>
+
+<img src="${ad.photos?.[0] || 'logo.png'}">
+
+<h4>${ad.title}</h4>
+
+<p>🕓 ${timeAgo(ad.id)}</p>
+
+<div class="actions">
+
+<button onclick="event.stopPropagation(); openChat(${ad.userId})">💬</button>
+
+<button onclick="event.stopPropagation(); editAd(${ad.id})">✏</button>
+
+<button onclick="event.stopPropagation(); deleteAd(${ad.id})">🗑</button>
+
+</div>
+
+</div>
+`;
+
+ });
+
+}
+
+/* ===== NAVIGATION ===== */
+
+function deleteAd(id){
+
+ if(!confirm("❗ Оё мехоҳед ин эълонро удалит кунед?")){
+  return;
+ }
+
+ fetch("/delete-ad/"+id,{method:"POST"})
+ .then(()=>{
+  location.reload();
+ });
+
+}
+
+function editAd(id){
+ location.href="/edit.html?id="+id;
+}
+
+function openChat(id){
+ location.href="/chat/"+id;
+}
+
+function goHome(){
+ location.href="/index.html";
+}
+
+function editProfile(){
+ location.href="/edit-profile.html";
+}
+
+function addAd(){
+ location.href="/add.html";
+}
+
+function openChats(){
+ location.href="/chats.html";
+}
+
+function addBooking(){
+ location.href="add-booking.html";
+}
+
+function confirm(){
+
+ const code = document.getElementById("codeInput").value;
+
+ if(!code){
+  alert("Код ворид кунед");
+  return;
+ }
+
+ fetch("/api/check-promo",{
+  method:"POST",
+  headers:{
+   "Content-Type":"application/json"
+  },
+  body:JSON.stringify({
+   promo: code
+  })
+ })
+ .then(r=>r.json())
+ .then(d=>{
+
+  if(!d.success){
+   alert(d.message);
+   return;
+  }
+
+  showConfirmBox(d.booking);
+
+ });
+
+}
+
+fetch("/api/my-bookings")
+.then(r=>r.json())
+.then(list=>{
+
+ const pending = list.filter(b=>b.status==="pending");
+ const confirmed = list.filter(b=>b.status==="confirmed");
+ const history = list.filter(b=>b.status==="rejected");
+
+ render(pending,"pendingBox");
+ render(confirmed,"confirmedBox");
+ render(history,"historyBox");
+
+});
+
+function render(arr,id){
+
+ const box = document.getElementById(id);
+
+ box.innerHTML = "";
+
+ arr.forEach(b=>{
+
+ box.innerHTML += `
+  <div class="${b.status}">
+   📅 ${b.date} | ⏰ ${b.start}-${b.end}
+  </div>
+ `;
+
+ });
+
+}
+
+
+let CURRENT_BOOKING_ID = null;
+
+function showConfirmBox(b){
+
+ CURRENT_BOOKING_ID = b.id;
+
+ document.getElementById("confirmInfo").innerHTML = `
+  👤 ${b.user || "User"}<br>
+  📅 ${b.date}<br>
+  ⏰ ${b.start} - ${b.end}
+ `;
+
+ document.getElementById("confirmBox").style.display="flex";
+
+}
+
+function approve(){
+
+ sendDecision("accept");
+
+}
+
+function reject(){
+
+ sendDecision("reject");
+
+}
+
+function sendDecision(action){
+
+ fetch("/booking-action?id="+CURRENT_BOOKING_ID+"&action="+action)
+ .then(()=>{
+  alert("✅ Амалиёт иҷро шуд");
+  document.getElementById("confirmBox").style.display="none";
+ });
+
+}
+
+function openAd(id){
+ location.href = "/ad.html?id=" + id;
+}
+
+function openItem(id, isBooking){
+
+ if(isBooking === true || isBooking === "true"){
+  location.href = "/booking-view.html?id=" + id;
+ }else{
+  location.href = "/ad.html?id=" + id;
+ }
+
+}
+
+</script>
+
+</body>
+</html>

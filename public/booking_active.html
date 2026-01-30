@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="tj">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Бронҳои фаъол</title>
+
+<style>
+body{
+ font-family:system-ui;
+ background:#f2f4f8;
+ margin:0;
+ padding:12px;
+}
+
+h2{text-align:center}
+
+.card{
+ background:#eaffea;
+ padding:12px;
+ border-radius:12px;
+ margin-bottom:10px;
+}
+</style>
+</head>
+
+<body>
+
+<h2>✅ Бронҳои тасдиқшуда</h2>
+
+<div id="list">Загрузка...</div>
+
+<script>
+
+fetch("/api/my-active-bookings")
+.then(r=>r.json())
+.then(active=>{
+
+ const box = document.getElementById("list");
+
+ if(!active.length){
+  box.innerHTML="Брони фаъол нест";
+  return;
+ }
+
+ box.innerHTML="";
+
+ active.forEach(b=>{
+
+  box.innerHTML += `
+   <div class="card">
+    👤 ${b.renterName}<br>
+    🏠 ${b.adTitle}<br>
+
+    📅 ${b.date}<br>
+    ⏰ ${b.start} - ${b.end}
+
+   </div>
+  `;
+
+ });
+
+});
+
+</script>
+
+</body>
+</html>

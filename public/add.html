@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Иловаи эълон</title>
+
+<style>
+
+body{
+ margin:0;
+ font-family:system-ui;
+ background:#f2f4f8;
+}
+
+.header{
+ background:#2f80ed;
+ color:white;
+ padding:15px;
+ text-align:center;
+ font-size:20px;
+ font-weight:700;
+}
+
+.card{
+ background:white;
+ margin:15px;
+ padding:16px;
+ border-radius:16px;
+ box-shadow:0 4px 12px rgba(0,0,0,.1);
+}
+
+input, textarea, select{
+ width:100%;
+ padding:12px;
+ margin-top:10px;
+ border-radius:12px;
+ border:1px solid #ddd;
+ font-size:15px;
+}
+
+textarea{
+ resize:none;
+ height:90px;
+}
+
+button{
+ width:100%;
+ margin-top:16px;
+ padding:14px;
+ border:none;
+ border-radius:14px;
+ background:#2f80ed;
+ color:white;
+ font-size:16px;
+ font-weight:700;
+}
+
+.form-select{
+ width:100%;
+ padding:12px;
+ margin-top:10px;
+ border-radius:12px;
+ border:1px solid #ddd;
+ font-size:15px;
+ background:white;
+ appearance:none;
+ -webkit-appearance:none;
+ -moz-appearance:none;
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="header">➕ Иловаи эълон</div>
+
+<div class="card">
+
+<form action="/add-ad" method="POST" enctype="multipart/form-data">
+
+<!-- AUTO FIELDS -->
+<input type="hidden" name="id" id="adId">
+<input type="hidden" name="owner" value="me">
+
+<!-- BASIC -->
+<input name="title" placeholder="Номи эълон" required>
+
+<input name="price" placeholder="Нарх" required>
+
+<input name="phone" placeholder="Телефон" required>
+
+<textarea name="desc" placeholder="Тавсифи эълон"></textarea>
+
+<!-- CITY -->
+<select name="city" required>
+
+<option value="">Шаҳр ё ноҳия</option>
+
+<!-- Душанбе -->
+<option value="Душанбе">Душанбе</option>
+
+<!-- Суғд -->
+<option value="Хуҷанд">Хуҷанд</option>
+<option value="Истаравшан">Истаравшан</option>
+<option value="Панҷакент">Панҷакент</option>
+<option value="Конибодом">Конибодом</option>
+<option value="Исфара">Исфара</option>
+<option value="Бӯстон">Бӯстон</option>                     <option value="Гулистон">Гулистон</option>
+<option value="Ашт">Ашт</option>
+<option value="Зафаробод">Зафаробод</option>
+<option value="Ҷаббор Расулов">Ҷаббор Расулов</option>
+<option value="Мастчоҳ">Мастчоҳ</option>
+<option value="Кӯҳистони Мастчоҳ">Кӯҳистони Мастчоҳ</option>
+<option value="Спитамен">Спитамен</option>
+<option value="Шаҳристон">Шаҳристон</option>
+<option value="Деваштич">Деваштич</option>
+
+<!-- Хатлон -->
+<option value="Дӯстӣ">Дӯстӣ</option>
+<option value="Бохтар">Бохтар</option>
+<option value="Кӯлоб">Кӯлоб</option>
+<option value="Вахш">Вахш</option>
+<option value="Ёвон">Ёвон</option>
+<option value="Фархор">Фархор</option>
+<option value="Данғара">Данғара</option>
+<option value="Левакант">Левакант</option>                 <option value="Норак">Норак</option>
+<option value="Панҷ">Панҷ</option>
+<option value="Қубодиён">Қубодиён</option>
+<option value="Ҷайҳун">Ҷайҳун</option>
+<option value="Ҷалолиддини Балхӣ">Ҷалолиддини Балхӣ</option>
+<option value="Муъминобод">Муъминобод</option>
+<option value="Ховалинг">Ховалинг</option>
+<option value="Темурмалик">Темурмалик</option>
+<option value="Балҷувон">Балҷувон</option>
+<option value="Шамсиддин Шоҳин">Шамсиддин Шоҳин</option>
+
+<!-- НТҶ (Рашт / Ҳисор) -->
+<option value="Ҳисор">Ҳисор</option>
+<option value="Турсунзода">Турсунзода</option>
+<option value="Ваҳдат">Ваҳдат</option>
+<option value="Рӯдакӣ">Рӯдакӣ</option>
+<option value="Файзобод">Файзобод</option>
+<option value="Рашт">Рашт</option>
+<option value="Тоҷикобод">Тоҷикобод</option>
+<option value="Нуробод">Нуробод</option>                   <option value="Шаҳринав">Шаҳринав</option>
+<option value="Варзоб">Варзоб</option>
+
+<!-- ВМКБ -->                                              <option value="Хоруғ">Хоруғ</option>
+<option value="Шуғнон">Шуғнон</option>                     <option value="Рӯшон">Рӯшон</option>
+<option value="Мурғоб">Мурғоб</option>                     <option value="Ванҷ">Ванҷ</option>
+<option value="Дарвоз">Дарвоз</option>                     <option value="Ишкошим">Ишкошим</option>
+
+</select>
+
+<!-- CATEGORY -->
+
+<select name="category" required class="form-select" id="catSelect">
+ <option value="" disabled selected>📂 Категория</option>
+
+<!-- REAL ESTATE -->
+<option value="Квартира">Квартира</option>
+<option value="Хона">Хона</option>
+<option value="Иҷора">Иҷора</option>
+<option value="Дукон">Дукон</option>
+
+<!-- TRANSPORT -->
+<option value="Мошин">Мошин</option>
+<option value="Мотоцикл">Мотоцикл</option>
+<option value="Скутер">Скутер</option>
+<option value="Велосипед">Велосипед</option>
+
+<!-- ELECTRONICS -->
+<option value="Телефон">Телефон</option>
+<option value="Компютер">Компютер</option>
+<option value="Ноутбук">Ноутбук</option>
+<option value="Телевизор">Телевизор</option>
+
+<!-- JOB -->
+<option value="Кор">Кор</option>
+<option value="Хизмат">Хизмат</option>
+
+<!-- HOME -->
+<option value="Мебел">Мебел</option>
+<option value="Асбоб">Асбоб</option>
+<option value="Кондиционер">Кондиционер</option>
+<option value="Холодилник">Холодилник</option>
+
+<!-- OTHER -->
+<option value="Либос">Либос</option>
+<option value="Ҳайвонот">Ҳайвонот</option>
+<option value="Китоб">Китоб</option>
+<option value="Дигар">Дигар</option>
+
+</select>
+
+<!-- SUB CATEGORY -->
+
+<select id="subSelect" name="sub" class="form-select" style="display:none"></select>
+
+<!-- PHOTOS -->
+
+<input type="file" name="photos" accept="image/*" multiple required>
+
+<button type="submit">📤 Илова кардан</button>
+
+</form>
+
+</div>
+
+
+<script>
+
+// AUTO ID GENERATOR
+document.getElementById("adId").value = Date.now();
+
+</script>
+
+<script>
+
+const catSel = document.getElementById("catSelect");
+const subSel = document.getElementById("subSelect");
+
+const SUBS = {
+
+ Мошин:[
+  {id:"sedan", tj:"Седан", ru:"Седан"},
+  {id:"suv", tj:"Ҷип", ru:"Внедорожник"},
+  {id:"electric", tj:"Электро", ru:"Электро"},
+  {id:"truck", tj:"Боркаш", ru:"Грузовой"}
+ ],
+
+ Телефон:[
+  {id:"iphone", tj:"iPhone", ru:"iPhone"},
+  {id:"samsung", tj:"Samsung", ru:"Samsung"},
+  {id:"xiaomi", tj:"Xiaomi", ru:"Xiaomi"}
+ ],
+
+ Квартира:[
+  {id:"1room", tj:"1 ҳуҷра", ru:"1 комната"},
+  {id:"2room", tj:"2 ҳуҷра", ru:"2 комнаты"},
+  {id:"3room", tj:"3 ҳуҷра", ru:"3 комнаты"}
+ ],
+
+ Хона:[
+  {id:"yard", tj:"Ҳавлидор", ru:"Частный дом"},
+  {id:"villa", tj:"Вилла", ru:"Вилла"}
+ ]
+
+};
+
+catSel.addEventListener("change",loadSubs);
+
+function loadSubs(){
+
+ const cat = catSel.value;
+
+ if(!SUBS[cat]){
+  subSel.style.display="none";
+  subSel.innerHTML="";
+  subSel.removeAttribute("required");
+  return;
+ }
+
+ const lang = localStorage.getItem("lang") || "tj";
+
+ subSel.style.display="block";
+ subSel.innerHTML="";
+ subSel.setAttribute("required",true);
+
+ const def = document.createElement("option");
+ def.value="";
+ def.textContent = lang==="tj" ? "Зеркатегория" : "Подкатегория";
+ subSel.appendChild(def);
+
+ SUBS[cat].forEach(s=>{
+  const opt = document.createElement("option");
+  opt.value = s.id;
+  opt.textContent = s[lang];
+  subSel.appendChild(opt);
+ });
+
+}
+
+// AUTO ID
+document.getElementById("adId").value = Date.now();
+
+</script>
+
+</body>
+</html>

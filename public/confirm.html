@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<title>Тасдиқи брон</title>
+
+<style>
+body{font-family:system-ui;background:#f2f4f8}
+.box{
+ background:white;
+ margin:40px;
+ padding:20px;
+ border-radius:14px;
+}
+input,button{
+ width:100%;
+ padding:12px;
+ margin-top:10px;
+}
+.ok{background:#27ae60;color:white}
+.no{background:#e74c3c;color:white}
+</style>
+</head>
+
+<body>
+
+<div class="box">
+
+<h3>Коди брон</h3>
+
+<input id="code" placeholder="6 рақам">
+
+<button class="ok" onclick="send('ok')">Тасдиқ</button>
+<button class="no" onclick="send('no')">Рад кардан</button>
+
+</div>
+
+<script>
+
+function send(action){
+
+ const code=document.getElementById("code").value;
+
+ fetch("/api/confirm-booking",{
+  method:"POST",
+  headers:{'Content-Type':'application/json'},
+  body:JSON.stringify({code,action})
+ })
+ .then(r=>r.json())
+ .then(d=>{
+
+  if(d.success)
+   alert("Амалиёт иҷро шуд ✅");
+  else
+   alert("Код нодуруст ё бекор шудааст ❌");
+
+ });
+
+}
+
+</script>
+
+</body>
+</html>

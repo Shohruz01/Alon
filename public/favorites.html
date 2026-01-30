@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Маъқул</title>
+
+<style>
+
+body{
+ margin:0;
+ background:#f2f3f7;
+ font-family:system-ui;
+}
+
+.fav-title{
+ font-size:18px;
+ font-weight:700;
+ padding:14px;
+ background:white;
+ box-shadow:0 2px 8px rgba(0,0,0,.08);
+}
+
+.ads{
+ display:grid;
+ grid-template-columns:repeat(2,1fr);
+ gap:12px;
+ padding:12px;
+}
+
+.ad-card{
+ background:white;
+ border-radius:16px;
+ overflow:hidden;
+ box-shadow:0 4px 10px rgba(0,0,0,.08);
+}
+
+.ad-card img{
+ width:100%;
+ height:150px;
+ object-fit:cover;
+}
+
+.ad-info{
+ padding:8px;
+}
+
+.ad-price{
+ font-weight:700;
+ color:#27ae60;
+}
+
+.ad-title{
+ font-size:14px;
+ margin-top:4px;
+}
+
+.remove-btn{
+ width:90%;
+ margin:8px auto 12px;
+ padding:10px;
+ border:none;
+ border-radius:12px;
+ background:#ff4757;
+ color:white;
+ font-weight:700;
+ display:block;
+}
+
+.empty{
+ padding:30px;
+ text-align:center;
+ color:#666;
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="fav-title">❤️ Эълонҳои маъқул</div>
+
+<div id="favAds" class="ads"></div>
+
+<script>
+
+const favs = JSON.parse(localStorage.getItem("favs")) || [];
+
+fetch('/api/ads')
+.then(r => r.json())
+.then(data => {
+
+ const box = document.getElementById("favAds");
+
+ const filtered = data.filter(ad => favs.includes(ad.id));
+
+ if(filtered.length === 0){
+  box.innerHTML = `
+   <div class="empty">
+    ❤️ Ҳоло эълони маъқул нест
+   </div>
+  `;
+  return;
+ }
+
+ filtered.forEach(ad => {
+
+  const img = ad.photos?.[0] || "/noimage.png";
+
+  const card = document.createElement("div");
+  card.className = "ad-card";
+
+  card.innerHTML = `
+   <img src="${img}">
+   <div class="ad-info">
+    <div class="ad-price">💰 ${ad.price}</div>
+    <div class="ad-title">${ad.title}</div>
+   </div>
+
+   <button class="remove-btn" onclick="removeFav(${ad.id})">
+    ❌ Нест кардан
+   </button>
+  `;
+
+  box.appendChild(card);
+
+ });
+
+});
+
+function removeFav(id){
+
+ // REMOVE FROM FAVORITES
+ let favs = JSON.parse(localStorage.getItem("favs")) || [];
+ favs = favs.filter(x => x !== id);
+ localStorage.setItem("favs", JSON.stringify(favs));
+
+ // REMOVE LIKE COUNT
+ let likes = JSON.parse(localStorage.getItem("likes")) || {};
+ delete likes[id];
+ localStorage.setItem("likes", JSON.stringify(likes));
+
+ // REFRESH PAGE
+ location.reload();
+
+}
+
+</script>
+
+</body>
+</html>
