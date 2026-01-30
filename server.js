@@ -1054,6 +1054,20 @@ app.post("/api/make-vip", auth, (req,res)=>{
 
 });
 
+// ================= AUTO PING (ANTI SLEEP) =================
+
+const https = require("https");
+
+const SELF_URL = "https://alon-qxlw.onrender.com";
+
+setInterval(() => {
+  https.get(SELF_URL, (res) => {
+    console.log("Auto ping:", res.statusCode);
+  }).on("error", (err) => {
+    console.log("Ping error:", err.message);
+  });
+}, 5 * 60 * 1000); // every 5 minutes
+
 /* ===== START SERVER ===== */
 
 server.listen(PORT, () => {
