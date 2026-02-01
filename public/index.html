@@ -519,7 +519,7 @@ html,body{
 <div class="header">
 <div class="logo-box">
 
- <img src="/surh.png" class="logo-img">
+ <img src="/alon.png" class="logo-img">
 
  <div class="stats-box">
 
@@ -1306,20 +1306,37 @@ function setTab(el,type){
 
 <script>
 
-const socket = io();
-
-/* DEBUG */
-socket.on("connect", () => {
- console.log("SOCKET CONNECTED ✅");
+const socket = io({
+ transports:["websocket"],
+ reconnection:true,
+ reconnectionDelay:1000,
+ reconnectionAttempts:10
 });
 
-/* STATS RECEIVE */
+socket.on("connect", ()=>{
+
+ console.log("✅ SOCKET CONNECTED:", socket.id);
+
+ fetch("/api/me",{credentials:"include"})
+ .then(r=>r.json())
+ .then(d=>{
+
+  if(d.logged){
+   socket.emit("registerUser", d.user.id);
+   console.log("📤 REGISTER SENT:", d.user.id);
+  }
+
+ });
+
+});
+
+// ✅ ONLY RECEIVE STATS
 socket.on("stats", data => {
 
- console.log("STATS:", data);
+ console.log("📊 STATS:", data);
 
  document.getElementById("onlineCount").innerText = data.online;
- document.getElementById("totalCount").innerText = data.total;
+ document.getElementById("totalCount").innerText  = data.total;
 
 });
 
@@ -1342,19 +1359,24 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 
+let firebaseChecked = false;
+
 onAuthStateChanged(auth,(user)=>{
 
+ if(firebaseChecked) return;
+ firebaseChecked = true;
+
  if(!user){
-  window.location.href="login.html";
+  console.log("Firebase: not logged");
+  // ❌ redirect immediately NOT allowed
+ }else{
+  console.log("Firebase: logged");
  }
 
 });
 
 
 </script>
-
-</body>
-</html>
 
 </body>
 </html>

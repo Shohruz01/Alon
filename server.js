@@ -8,7 +8,17 @@ const fs = require("fs");
 let BOOKINGS_CACHE = [];
 let USERS_CACHE = [];
 let ADS_CACHE = [];
-let onlineUsers = 0;
+let MESSAGES_CACHE = [];
+
+if(!fs.existsSync("messages.json")){
+ fs.writeFileSync("messages.json","[]");
+}
+
+MESSAGES_CACHE = JSON.parse(fs.readFileSync("messages.json"));
+// ===== REALTIME STATS =====
+let ONLINE_USERS = new Set();
+let ONLINE_CONNECTIONS = 0;
+let totalUsers = 0;
 let bookingLock = false;
 const app = express();
 const compression = require("compression");
@@ -36,12 +46,11 @@ app.use(session({
   secret: 'pibozor_secret',
   resave: false,
   saveUninitialized: false,
-  cookie: {
-    maxAge: 1000 * 60 * 60 * 24
-  }
+  cookie:{
+ maxAge:1000*60*60*24,
+ sameSite:"lax"
+}
 }));
-
-app.use('/uploads', express.static('uploads'));
 
 /* ===== FILE INIT ===== */
 
@@ -55,6 +64,7 @@ if (!fs.existsSync('bookings.json')) {
 
 BOOKINGS_CACHE = JSON.parse(fs.readFileSync("bookings.json"));
 USERS_CACHE = JSON.parse(fs.readFileSync("users.json"));
+totalUsers = USERS_CACHE.length;
 ADS_CACHE = JSON.parse(fs.readFileSync("ads.json"));
 if (!fs.existsSync('uploads')) fs.mkdirSync('uploads');
 
@@ -108,10 +118,19 @@ const writeAds = d => {
 /* ===== AUTH ===== */
 
 function auth(req, res, next) {
-  if (!req.session.user) {
-    return res.redirect('/login.html');
+
+ if(!req.session.user){
+
+  // IF API REQUEST
+  if(req.headers.accept?.includes("application/json")){
+   return res.status(401).json({ logged:false });
   }
-  next();
+
+  // IF PAGE REQUEST
+  return res.redirect("/login.html");
+ }
+
+ next();
 }
 
 /* ===== UPLOAD ===== */
@@ -217,6 +236,8 @@ app.post("/signup", (req, res) => {
  users.push(newUser);
  writeUsers(users);
  USERS_CACHE = users;
+ totalUsers = USERS_CACHE.length;
+sendStats();
 
  return res.json({
   success:true
@@ -241,7 +262,7 @@ app.post('/login', (req, res) => {
   }
 
   req.session.user = user;
-  res.redirect('/profile');
+  res.json({ success:true });
 
 });
 
@@ -251,24 +272,6 @@ app.get('/profile', auth, (req, res) => {
  res.sendFile(path.join(process.cwd(), 'public/profile.html'));
 });
 
-
-// PROFILE DATA API
-app.get("/api/me", (req,res)=>{
-
- if(!req.session.user){
-  return res.json(null);
- }
-
- const users = readUsers();
-
- const me = users.find(u=>u.id === req.session.user.id);
-
- res.json({
- ...me,
- username: me.username || me.name
-});
-
-});
 
 // LOGOUT
 app.get('/logout', (req, res) => {
@@ -299,7 +302,32 @@ app.post(
   images.push("/uploads/" + file.filename);
  }
 
- const ads = readAds();
+const ads = readAds();
+
+ const myAds = ads.filter(a => a.userId === req.session.user.id);
+
+const normalCount = myAds.filter(a => !a.booking).length;
+const bookingCount = myAds.filter(a => a.booking).length;
+
+if(req.body.booking === "true"){
+ if(bookingCount >= 3){
+  return res.json({
+   success:false,
+   message:"Максимум 3 эълони брон иҷозат аст"
+  });
+ }
+}else{
+ if(normalCount >= 5){
+  return res.json({
+   success:false,
+   message:"Максимум 5 эълони оддӣ иҷозат аст"
+  });
+ }
+}
+
+ const days = Number(req.body.duration);
+const expireAt = Date.now() + days * 24 * 60 * 60 * 1000;
+
 
  ads.push({
   id: Date.now(),
@@ -312,7 +340,10 @@ app.post(
   photos: images,
   userId: req.session.user.id,
   booking: req.body.booking === "true",
-  time: Date.now()
+  time: Date.now(),
+  expireAt: expireAt,
+  vip: false,
+  vipUntil: null
  });
 
  writeAds(ads);
@@ -324,42 +355,61 @@ app.post(
 // DELETE AD
 app.post('/delete-ad/:id', auth, (req, res) => {
 
-  const id = Number(req.params.id);
+ const id = Number(req.params.id);
 
-  let ads = readAds();
+ let ads = readAds();
 
-  const index = ads.findIndex(ad => ad.id === id);
+ const index = ads.findIndex(ad => ad.id === id);
 
-  if(index === -1){
-    return res.send('Эълон ёфт нашуд');
-  }
+ if(index === -1){
+  return res.status(404).json({success:false});
+ }
 
-  // фақат эълони соҳиби худаш
-  if(ads[index].userId !== req.session.user.id){
-    return res.send('Иҷозат надорӣ');
-  }
+ const ad = ads[index];
 
-  // танҳо 1 дона удалит
-  ads.splice(index, 1);
+ // ONLY OWNER
+ if(ad.userId !== req.session.user.id){
+  return res.status(403).json({success:false});
+ }
 
-  writeAds(ads);
+ // 🗑 DELETE IMAGES
+ if(ad.photos && ad.photos.length){
 
-  res.redirect('/profile');
+  ad.photos.forEach(p => {
+
+   const filePath = "public" + p;
+
+   if(fs.existsSync(filePath)){
+    fs.unlinkSync(filePath);
+   }
+
+  });
+
+ }
+
+ // 🗑 DELETE AD
+ ads.splice(index,1);
+
+ writeAds(ads);
+
+ res.json({ success:true });
 
 });
 
-app.get('/api/ads', (req, res) => {
-  const ads = readAds();
-  ads.sort((a,b)=>{
+app.get('/api/ads', (req,res)=>{
 
- if(b.vip && !a.vip) return 1;
- if(a.vip && !b.vip) return -1;
+ let ads = readAds();
 
- return (b.time||0) - (a.time||0);
+ ads.sort((a,b)=>{
 
-});
+  if(a.vip && !b.vip) return -1;
+  if(!a.vip && b.vip) return 1;
 
-res.json(ads);
+  return b.time - a.time;
+ });
+
+ res.json(ads);
+
 });
 
 app.get("/api/ad-owner/:id",(req,res)=>{
@@ -462,29 +512,98 @@ app.get('/api/ad/:id', (req, res) => {
 
 });
 
-io.on('connection', (socket) => {
+function sendStats(){
 
- onlineUsers++;
+ console.log("🔥 SEND STATS => ONLINE:", ONLINE_CONNECTIONS, "TOTAL:", totalUsers);
 
- const users = JSON.parse(fs.readFileSync("users.json"));
- const totalUsers = users.length;
-
- io.emit("stats", {
-  online: onlineUsers,
+ io.emit("stats",{
+  online: ONLINE_CONNECTIONS,
   total: totalUsers
  });
 
- socket.on('disconnect', () => {
+}
 
-  onlineUsers--;
+io.on("connection", socket => {
 
-  const users = JSON.parse(fs.readFileSync("users.json"));
+ console.log("✅ SOCKET CONNECTED:", socket.id);
 
-  io.emit("stats", {
-   online: onlineUsers,
-   total: users.length
-  });
+ // ================= VISITOR CONNECT =================
 
+ ONLINE_CONNECTIONS++;
+
+ sendStats();
+
+ // ================= REGISTER USER =================
+
+ socket.on("registerUser", uid => {
+
+  if(!uid) return;
+
+  console.log("📥 REGISTER USER:", uid);
+
+  socket.uid = uid;
+
+  ONLINE_USERS.add(uid);
+
+  sendStats();
+ });
+
+ // ================= CHAT ROOM =================
+
+ socket.on("joinRoom", room => {
+
+  if(!room) return;
+
+  socket.join(room);
+
+  console.log("📦 JOIN ROOM:", room);
+ });
+
+ // ================= SEND MESSAGE =================
+
+ socket.on("sendMessage", data => {
+
+  if(!data || !data.room || !data.text) return;
+
+  const msg = {
+   room: data.room,
+   from: data.from || null,
+   to: data.to || null,
+   text: data.text,
+   time: Date.now()
+  };
+
+  // memory
+  MESSAGES_CACHE.push(msg);
+
+  // save disk
+  fs.writeFileSync(
+   "messages.json",
+   JSON.stringify(MESSAGES_CACHE,null,2)
+  );
+
+  // send to room
+  io.to(data.room).emit("newMessage", msg);
+
+  console.log("💬 MESSAGE SENT:", data.room);
+ });
+
+ // ================= DISCONNECT =================
+
+ socket.on("disconnect", () => {
+
+  console.log("❌ SOCKET DISCONNECTED:", socket.id);
+
+  ONLINE_CONNECTIONS--;
+
+  if(ONLINE_CONNECTIONS < 0)
+   ONLINE_CONNECTIONS = 0;
+
+  if(socket.uid){
+   ONLINE_USERS.delete(socket.uid);
+  }
+
+  sendStats();
  });
 
 });
@@ -516,6 +635,10 @@ app.post("/firebase-login",(req,res)=>{
   users.push(user);
 
   writeUsers(users);
+
+ USERS_CACHE = users;
+totalUsers = USERS_CACHE.length;
+sendStats();
 
   console.log("New Google user created");
  }
@@ -554,19 +677,33 @@ req.session.save(() => {
 
 app.post("/upload-avatar", auth, upload.single("avatar"), (req,res)=>{
 
+ if(!req.file){
+  return res.redirect("/edit-profile.html");
+ }
+
  let users = readUsers();
 
  const index = users.findIndex(u=>u.id === req.session.user.id);
 
- if(index === -1) return res.redirect("/profile");
+ if(index === -1){
+  return res.redirect("/profile");
+ }
 
+ // MOVE FILE TO PUBLIC
+ const newPath = "public/uploads/" + req.file.filename;
+
+ fs.renameSync(req.file.path, newPath);
+
+ // SAVE PATH
  users[index].photo = "/uploads/" + req.file.filename;
 
  writeUsers(users);
 
  req.session.user = users[index];
 
- res.redirect("/profile");
+ req.session.save(()=>{
+  res.redirect("/profile");
+ });
 
 });
 
@@ -585,6 +722,20 @@ app.get("/api/booking-ads",(req,res)=>{
 // GET BOOKINGS ONLY
 app.get("/api/bookings", auth, (req,res)=>{
  res.json(enrichBookings(BOOKINGS_CACHE));
+});
+
+app.get("/api/booking/:id", auth, (req,res)=>{
+
+ const id = Number(req.params.id);
+
+ const booking = BOOKINGS_CACHE.find(b => b.id === id);
+
+ if(!booking){
+  return res.status(404).json({success:false});
+ }
+
+ res.json(booking);
+
 });
 
 app.post("/api/request-booking",(req,res)=>{
@@ -677,36 +828,42 @@ function minutesToTime(min){
 
 setInterval(()=>{
 
- let list = BOOKINGS_CACHE;
  const now = Date.now();
 
- list = list.map(b=>{
+ let ads = readAds();
+ let changed = false;
 
-  // auto expire
-  if(
-   b.status==="pending" &&
-   b.expireAt &&
-   now > b.expireAt
-  ){
-   b.status="expired";
-   b.state="expired";
-  }
+ ads = ads.filter(ad=>{
 
-  // auto finish confirmed
-  if(b.status==="confirmed"){
-   const endTime = new Date(b.date+" "+b.end).getTime();
-   if(now > endTime){
-    b.finished = true;
+  if(ad.expireAt && now > ad.expireAt){
+
+   console.log("⏰ EXPIRED AD:", ad.title);
+
+   // DELETE PHOTOS
+   if(ad.photos){
+    ad.photos.forEach(p=>{
+
+     const filePath = "public" + p;
+
+     if(fs.existsSync(filePath)){
+      fs.unlinkSync(filePath);
+     }
+
+    });
    }
+
+   changed = true;
+   return false;
   }
 
-  return b;
+  return true;
  });
 
- fs.writeFileSync("bookings.json",JSON.stringify(list,null,2));
- BOOKINGS_CACHE = list;
+ if(changed){
+  writeAds(ads);
+ }
 
-},60000);
+}, 60000);
 
 app.get("/api/my-booking-requests", auth, (req,res)=>{
 
@@ -1027,32 +1184,6 @@ app.get("/api/user/:id",(req,res)=>{
 
 });
 
-app.post("/api/make-vip", auth, (req,res)=>{
-
- const { adId } = req.body;
-
- let ads = readAds();
-
- const index = ads.findIndex(a=>a.id==adId);
-
- if(index === -1){
-  return res.json({success:false,message:"Эълон ёфт нашуд"});
- }
-
- // танҳо соҳиби эълон
- if(ads[index].userId !== req.session.user.id){
-  return res.json({success:false,message:"Иҷозат нест"});
- }
-
- // VIP flag
- ads[index].vip = true;
- ads[index].vipTime = Date.now();
-
- writeAds(ads);
-
- res.json({success:true});
-
-});
 
 // ================= AUTO PING (ANTI SLEEP) =================
 
@@ -1067,6 +1198,119 @@ setInterval(() => {
     console.log("Ping error:", err.message);
   });
 }, 5 * 60 * 1000); // every 5 minutes
+
+setInterval(()=>{
+
+ let ads = readAds();
+ const now = Date.now();
+
+ const filtered = ads.filter(ad => {
+
+  if(ad.expireAt && now > ad.expireAt){
+   console.log("Expired removed:", ad.title);
+   return false;
+  }
+
+  return true;
+ });
+
+ if(filtered.length !== ads.length){
+  writeAds(filtered);
+ }
+
+}, 60000); // ҳар 1 дақиқа тафтиш
+
+app.get("/api/me", (req,res)=>{
+
+ if(req.session.user){
+  res.json({
+   logged:true,
+   user:req.session.user
+  });
+ }else{
+  res.json({ logged:false });
+ }
+
+});
+
+app.post("/api/vip/create", auth, (req,res)=>{
+
+ const { adId, plan } = req.body;
+
+ let ads = readAds();
+
+ const ad = ads.find(a=>a.id==adId);
+
+ if(!ad){
+  return res.json({success:false,message:"Эълон ёфт нашуд"});
+ }
+
+ if(ad.userId !== req.session.user.id){
+  return res.json({success:false,message:"Иҷозат нест"});
+ }
+
+ let days = 0;
+ let price = 0;
+
+ if(plan == "1"){
+  days = 3;
+  price = 10;
+ }
+ else if(plan == "2"){
+  days = 10;
+  price = 30;
+ }
+ else if(plan == "3"){
+  days = 30;
+  price = 60;
+ }
+ else{
+  return res.json({success:false,message:"Пакет нодуруст"});
+ }
+
+ // TEST payment redirect
+ res.json({
+  success:true,
+  payUrl: `/vip-success.html?id=${adId}&days=${days}&price=${price}`
+ });
+
+});
+
+app.post("/api/vip/confirm", auth, (req,res)=>{
+
+ const { adId, days } = req.body;
+
+ let ads = readAds();
+
+ const index = ads.findIndex(a=>a.id==adId);
+
+ if(index === -1){
+  return res.json({success:false});
+ }
+
+ if(ads[index].userId !== req.session.user.id){
+  return res.json({success:false});
+ }
+
+ ads[index].vip = true;
+ ads[index].vipUntil = Date.now() + (Number(days) * 24 * 60 * 60 * 1000);
+
+ writeAds(ads);
+
+ res.json({success:true});
+
+});
+
+app.get("/api/messages/:room", auth, (req,res)=>{
+
+ const room = req.params.room;
+
+ const list = MESSAGES_CACHE.filter(m => m.room === room);
+
+ res.json(list);
+
+});
+
 
 /* ===== START SERVER ===== */
 

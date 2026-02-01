@@ -264,9 +264,49 @@ img{
  color:#555;
 }
 
+/* IMAGE SLIDER */
+
+#slider{
+ display:flex;
+ overflow-x:auto;
+ scroll-snap-type:x mandatory;
+ gap:10px;
+}
+
+#slider img{
+ min-width:100%;
+ height:260px;
+ object-fit:cover;
+ border-radius:18px;
+ scroll-snap-align:center;
+ cursor:pointer;
+}
+
+/* IMAGE MODAL */
+
+#imgModal{
+ display:none;
+ position:fixed;
+ inset:0;
+ background:rgba(0,0,0,.95);
+ z-index:99999;
+ align-items:center;
+ justify-content:center;
+}
+
+#modalImg{
+ max-width:95%;
+ max-height:95%;
+ border-radius:14px;
+}
+
 </style>
 </head>
 <body>
+
+<div id="imgModal">
+ <img id="modalImg">
+</div>
 
 <div id="promoModal" class="modal">
  <div class="modal-card">
@@ -289,6 +329,19 @@ img{
   <button onclick="copyPromo()" class="copy-btn">
    📋 Нусха кардан
   </button>
+   
+   <button onclick="sendWhatsapp()" style="
+ width:100%;
+ padding:14px;
+ background:#25D366;
+ border:none;
+ border-radius:14px;
+ color:white;
+ font-weight:800;
+ box-shadow:0 6px 15px rgba(37,211,102,.35)
+">
+ 📲 Ба WhatsApp фиристодан
+</button>
 
  </div>
 </div>
@@ -328,18 +381,36 @@ console.log("DATA =", d);
 
  const ad = d;
 
- window.CURRENT_CATEGORY = ad.category;
- window.CURRENT_PHONE = ad.whatsapp || ad.phone;
+const modal = document.getElementById("imgModal");
+const modalImg = document.getElementById("modalImg");
+
+// OWNER CHECK
+checkAdOwner(ad.userId);
+
+// PHONE LOGIN CHECK
+checkLoginAndPhone(ad.whatsapp || ad.phone);
+
+window.CURRENT_CATEGORY = ad.category;
+window.CURRENT_PHONE = ad.whatsapp || ad.phone;
 
  document.getElementById("box").innerHTML = `
 
- <img src="${ad.photos?.[0] || 'logo.png'}">
+ <div id="slider"></div>
 
  <div class="title">${ad.title}</div>
  <div class="city">📍 ${ad.city}</div>
  <div class="price">${ad.price} сомонӣ / соат</div>
 
  <div class="desc">${ad.desc || ""}</div>
+  
+ <div id="phoneBox" style="
+ margin-top:12px;
+ padding:12px;
+ border-radius:14px;
+ background:#f1f5ff;
+ font-weight:800;
+ text-align:center;
+"></div> 
 
  <div class="time-box">
 
@@ -362,12 +433,52 @@ console.log("DATA =", d);
 
  <div id="endPreview"></div>
 
+ <button onclick="copyBookingLink()" style="
+ width:100%;
+ padding:14px;
+ border:none;
+ border-radius:16px;
+ background:#f1f5ff;
+ font-weight:900;
+ color:#2f80ed;
+ margin-bottom:10px;
+ box-shadow:0 6px 15px rgba(47,128,237,.15)
+">
+ 🔗 Нусха кардани линк
+</button>
+
  <button class="main-btn" onclick="createBooking()">
   Брон кардан
  </button>
+  
+ <button id="deleteAdBtn" class="close-btn"
+ onclick="deleteAd()"
+ style="background:#ff3b3b;color:white;font-weight:800;display:none">
+ 🗑 Удалить эълон
+</button>
 
  </div>
  `;
+
+const slider = document.getElementById("slider");
+
+// LOAD PHOTOS
+slider.innerHTML="";
+
+(ad.photos || []).forEach(src=>{
+
+ const img = document.createElement("img");
+ img.src = src;
+
+ img.onclick = ()=>{
+  modal.style.display="flex";
+  modalImg.src = src;
+  document.body.style.overflow="hidden";
+ };
+
+ slider.appendChild(img);
+
+});
 
  document.getElementById("duration").addEventListener("change", ()=>{
   controlMinutes();
@@ -498,7 +609,7 @@ function calcEnd(){
 
  let total = h*60 + m + Number(dur);
 
- let eh = Math.floor(total/60);
+ let eh = Math.floor(total/60) % 24;
  let em = total%60;
 
  const endTime =
@@ -697,6 +808,191 @@ function copyPromo(){
  }
 
 }
+
+async function checkAdOwner(ownerId){
+
+ const r = await fetch("/api/me",{credentials:"include"});
+ const me = await r.json();
+
+ if(!me.logged) return;
+
+ // ONLY OWNER SEE DELETE BUTTON
+ if(me.user.id == ownerId){
+
+  document.getElementById("deleteAdBtn").style.display = "block";
+
+ }
+
+}
+
+async function deleteAd(){
+
+ if(!confirm("Эълон пурра нест карда шавад?")) return;
+
+ const r = await fetch("/delete-ad/" + AD_ID,{
+  method:"POST",
+  credentials:"include"
+ });
+
+ const d = await r.json();
+
+ if(d.success){
+
+  alert("✅ Эълон нест шуд");
+  location.href="/";
+
+ }else{
+
+  alert("❌ Хато ё иҷозат нест");
+
+ }
+
+}
+
+function checkLoginAndPhone(phone){
+
+ fetch("/api/me",{credentials:"include"})
+ .then(r=>r.json())
+ .then(d=>{
+
+  const box = document.getElementById("phoneBox");
+
+  // ================= LOGGED USER =================
+
+  if(d.logged){
+
+   box.innerHTML = `
+    📞 <a href="tel:${phone}" style="
+     text-decoration:none;
+     font-weight:900;
+     color:#2f80ed
+    ">
+     ${phone}
+    </a>
+   `;
+
+  }
+
+  // ================= NOT LOGGED =================
+
+  else{
+
+   const masked = maskPhone(phone);
+
+   box.innerHTML = `
+    📞 <b>${masked}</b>
+
+    <br>
+
+    <button onclick="goLogin()" style="
+     margin-top:8px;
+     padding:8px 16px;
+     background:#27ae60;
+     border:none;
+     border-radius:10px;
+     color:white;
+     font-weight:800
+    ">
+     👁 Намоиши рақам
+    </button>
+   `;
+
+  }
+
+ });
+
+}
+
+function maskPhone(phone){
+
+ if(!phone) return "";
+
+ // only digits
+ const clean = phone.replace(/\D/g,"");
+
+ if(clean.length < 7) return phone;
+
+ const start = clean.substring(0,3);   // 992
+ const end   = clean.substring(clean.length-2); // 45
+
+ return start + "****" + end;
+}
+
+function goLogin(){
+
+ const back = encodeURIComponent(location.href);
+
+ location.href = "/login.html?back=" + back;
+}
+
+function copyBookingLink(){
+
+ const url = window.location.href;
+
+ if(navigator.clipboard){
+
+  navigator.clipboard.writeText(url)
+  .then(()=>{
+   alert("✅ Линки брон нусха шуд");
+  })
+  .catch(()=>{
+   fallbackCopyLink(url);
+  });
+
+ }else{
+
+  fallbackCopyLink(url);
+
+ }
+
+}
+
+// backup for old phones
+function fallbackCopyLink(text){
+
+ const t = document.createElement("textarea");
+ t.value = text;
+
+ document.body.appendChild(t);
+ t.select();
+ document.execCommand("copy");
+ document.body.removeChild(t);
+
+ alert("✅ Линки брон нусха шуд");
+
+}
+
+function sendWhatsapp(){
+
+ const code = document.getElementById("promoText").innerText;
+
+ if(!code){
+  alert("Код ёфт нашуд");
+  return;
+ }
+
+ const text =
+  "Салом! 👋\n" +
+  "Ин промокоди брон:\n\n" +
+  code +
+  "\n\nЛутфан тасдиқ кунед ✅";
+
+ const url =
+  "https://wa.me/?text=" +
+  encodeURIComponent(text);
+
+ window.open(url, "_blank");
+
+}
+
+document.getElementById("imgModal").onclick = (e)=>{
+
+ if(e.target.id !== "imgModal") return;
+
+ document.getElementById("imgModal").style.display="none";
+ document.getElementById("modalImg").src="";
+ document.body.style.overflow="";
+};
 
 </script>
 

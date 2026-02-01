@@ -67,3 +67,10 @@ node_modules/
 
 # dataconnect generated files
 .dataconnect
+
+ads.json
+users.json
+bookings.json
+messages.json
+public/uploads
+temp

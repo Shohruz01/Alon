@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Success</title>
+</head>
+<body style="text-align:center;font-family:system-ui;padding:30px">
+
+<h2>✅ Пардохт қабул шуд</h2>
+
+<button id="ok">Фаъол кардани VIP</button>
+
+<script>
+
+const id = new URLSearchParams(location.search).get("id");
+
+document.getElementById("ok").onclick = ()=>{
+
+ fetch("/api/vip/confirm",{
+  method:"POST",
+  headers:{
+   "Content-Type":"application/json"
+  },
+  body:JSON.stringify({ adId:id })
+ })
+ .then(r=>r.json())
+ .then(d=>{
+  if(d.success){
+   location.href="/profile";
+  }
+ });
+
+};
+
+</script>
+
+</body>
+</html>

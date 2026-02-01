@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Edit Profile</title>
+
+<style>
+
+body{
+ margin:0;
+ background:#f2f3f7;
+ font-family:system-ui;
+}
+
+.header{
+ background:white;
+ padding:12px;
+ font-weight:700;
+ text-align:center;
+ box-shadow:0 2px 6px rgba(0,0,0,.08);
+}
+
+.card{
+ background:white;
+ margin:14px;
+ padding:14px;
+ border-radius:14px;
+ box-shadow:0 4px 10px rgba(0,0,0,.08);
+ text-align:center;
+}
+
+.avatar{
+ width:110px;
+ height:110px;
+ border-radius:50%;
+ object-fit:cover;
+ border:3px solid #2563eb;
+ margin-bottom:10px;
+}
+
+input{
+ width:100%;
+ padding:12px;
+ margin-top:10px;
+ border-radius:10px;
+ border:1px solid #ddd;
+ font-size:15px;
+}
+
+button{
+ width:100%;
+ margin-top:14px;
+ padding:14px;
+ border:none;
+ border-radius:12px;
+ background:#2563eb;
+ color:white;
+ font-size:16px;
+ font-weight:700;
+}
+
+.upload-btn{
+ background:#10b981;
+}
+
+</style>
+</head>
+<body>
+
+<div class="header">
+ ✏️ Таҳрири профиль
+</div>
+
+<div class="card">
+
+<img id="avatar" class="avatar" src="/avatar.png">
+
+<form id="avatarForm" enctype="multipart/form-data">
+
+<input type="file" name="avatar" accept="image/*" required>
+
+<button class="upload-btn">
+ 📤 Upload avatar
+</button>
+
+</form>
+
+<input id="username" placeholder="Username">
+<input id="city" placeholder="Шаҳр">
+<input id="birthyear" placeholder="Соли таваллуд">
+
+<button type="button" id="saveBtn">
+ 💾 Захира кардан
+</button>
+
+</div>
+
+<script>
+
+// LOAD PROFILE
+fetch("/api/me",{ credentials:"include" })
+.then(r=>r.json())
+.then(d=>{
+
+ if(!d.logged){
+  location.href="/login.html";
+  return;
+ }
+
+ const u = d.user;
+
+ document.getElementById("username").value = u.username || "";
+ document.getElementById("city").value = u.city || "";
+ document.getElementById("birthyear").value = u.birthyear || "";
+
+ if(u.photo){
+ document.getElementById("avatar").src = u.photo + "?t=" + Date.now();
+ }
+
+});
+
+// SAVE PROFILE
+document.getElementById("saveBtn").onclick = ()=>{
+
+ const data = {
+  username: username.value,
+  city: city.value,
+  birthyear: birthyear.value
+ };
+
+ fetch("/api/update-profile",{
+  method:"POST",
+  headers:{ "Content-Type":"application/json" },
+  credentials:"include",
+  body:JSON.stringify(data)
+ })
+ .then(r=>r.json())
+ .then(d=>{
+
+  if(d.success){
+   alert("✅ Профиль нав шуд");
+   location.href="/profile";
+  }else{
+   alert("❌ Хато шуд");
+  }
+
+ });
+
+};
+
+// UPLOAD AVATAR
+
+document.getElementById("avatarForm").onsubmit = (e)=>{
+
+ e.preventDefault();
+
+ const form = new FormData(e.target);
+
+ fetch("/upload-avatar",{
+  method:"POST",
+  body:form,
+  credentials:"include"
+ })
+ .then(()=>{
+
+  alert("✅ Сурат upload шуд");
+  location.reload();
+
+ });
+
+};
+
+</script>
+
+</body>
+</html>

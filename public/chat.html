@@ -1,159 +1,199 @@
 <!DOCTYPE html>
-<html lang="tg">
+<html lang="ru">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width">
 
-<title>Chat</title>
-
-<script localStorage.setItem('chatCount', 0);script>
-
-<script src="/socket.io/socket.io.js"></script>
+<title>Чат</title>
 
 <style>
+
 body{
  margin:0;
- font-family:Arial;
- background:#f2f2f2;
+ background:#f2f4f8;
+ font-family:system-ui;
 }
 
-.header{
- background:#2f80ed;
- color:white;
- padding:15px;
+.top{
+ padding:14px;
+ background:white;
+ font-weight:800;
  text-align:center;
- font-size:18px;
+ box-shadow:0 2px 8px rgba(0,0,0,.1);
 }
 
-.messages{
- height:75vh;
+.chat{
+ height:calc(100vh - 120px);
  overflow-y:auto;
  padding:10px;
 }
 
 .msg{
- background:white;
- padding:10px;
- border-radius:10px;
- margin-bottom:8px;
- max-width:80%;
+ max-width:75%;
+ padding:10px 14px;
+ margin:6px 0;
+ border-radius:14px;
+ font-size:14px;
 }
 
-.my{
- background:#2f80ed;
+.me{
+ background:#2563eb;
  color:white;
  margin-left:auto;
+ border-bottom-right-radius:4px;
+}
+
+.other{
+ background:white;
+ border-bottom-left-radius:4px;
 }
 
 .input-box{
  display:flex;
  padding:10px;
  background:white;
- position:fixed;
- bottom:0;
- width:100%;
 }
 
 input{
  flex:1;
- padding:10px;
- border-radius:8px;
- border:1px solid #ccc;
+ padding:12px;
+ border-radius:12px;
+ border:1px solid #ddd;
 }
 
 button{
- margin-left:5px;
- padding:10px 15px;
- background:#2f80ed;
- color:white;
+ margin-left:8px;
+ padding:12px 18px;
  border:none;
- border-radius:8px;
+ border-radius:12px;
+ background:#2563eb;
+ color:white;
+ font-weight:700;
 }
+
 </style>
 </head>
 
 <body>
 
-<div class="header">💬 Чат</div>
+<div class="top">💬 Чат</div>
 
-<div id="messages" class="messages"></div>
+<div id="chat" class="chat"></div>
 
 <div class="input-box">
-<input id="msg" placeholder="Навиштани паём...">
-<button onclick="send()">Фиристодан</button>
+ <input id="text" placeholder="Паём навис...">
+ <button id="send">➤</button>
 </div>
+
+<script src="/socket.io/socket.io.js"></script>
 
 <script>
 
 const socket = io();
 
-// гирифтани id-и эълон
-const params = new URLSearchParams(window.location.search);
-const adId = params.get('ad');
+const params = new URLSearchParams(location.search);
 
-// room барои ҳар эълон
-const room = 'ad_' + adId;
+const toUser = params.get("to");
+if(!toUser){
+ alert("Chat user not found");
+ location.href="/";
+}
+const adId   = params.get("ad");
 
-// дохил шудан
-socket.emit('joinRoom', room);
+let ME = null;
+let ROOM = null;
 
-// қабул
-socket.on('chatMessage', data => {
+// ================= GET ME =================
 
- const box = document.getElementById('messages');
+fetch("/api/me",{credentials:"include"})
+.then(r=>r.json())
+.then(d=>{
 
- const div = document.createElement('div');
- div.className = 'msg';
+ if(!d.logged){
+  alert("Login required");
+  location.href="/login.html";
+  return;
+ }
 
- if(data.me) div.classList.add('my');
+ ME = d.user.id;
 
- div.innerText = data.text;
+ const a = Math.min(Number(ME), Number(toUser));
+const b = Math.max(Number(ME), Number(toUser));
 
- box.appendChild(div);
- box.scrollTop = box.scrollHeight;
+ ROOM = a + "_" + b;
 
+ // JOIN ROOM
+ socket.emit("joinRoom", ROOM);
+
+ loadHistory();
 });
 
-// фиристодан
-function send(){
+// ================= LOAD HISTORY =================
 
- const input = document.getElementById('msg');
- const text = input.value;
+function loadHistory(){
 
- if(text === '') return;
+ fetch("/api/messages/" + ROOM,{credentials:"include"})
+ .then(r=>r.json())
+ .then(list=>{
 
- socket.emit('chatMessage',{
-  room: room,
-  text: text,
-  me: true
+  list.forEach(renderMsg);
+
+  scrollBottom();
  });
-
- let c = localStorage.getItem('chatCount') || 0;
-c++;
-localStorage.setItem('chatCount', c);
-
-saveChat();
-
- input.value = '';
 
 }
 
-function saveChat(){
+// ================= SEND =================
 
- let chats = JSON.parse(localStorage.getItem('chats')) || [];
+document.getElementById("send").onclick = sendMsg;
 
- const exists = chats.find(c => c.adId == adId);
+document.getElementById("text").onkeydown = e=>{
+ if(e.key==="Enter") sendMsg();
+};
 
- if(!exists){
-   chats.push({
-    adId: adId,
-    title: 'Эълон #' + adId,
-    unread: 0
-   });
- }
+function sendMsg(){
 
- localStorage.setItem('chats', JSON.stringify(chats));
+ const text = document.getElementById("text").value.trim();
 
+ if(!text) return;
+
+ socket.emit("sendMessage",{
+  room: ROOM,
+  from: ME,
+  to: toUser,
+  text
+ });
+
+ document.getElementById("text").value="";
+}
+
+// ================= RECEIVE =================
+
+socket.on("newMessage", msg => {
+
+ if(msg.room !== ROOM) return;
+
+ renderMsg(msg);
+ scrollBottom();
+
+});
+
+// ================= UI =================
+
+function renderMsg(m){
+
+ const div = document.createElement("div");
+
+ div.className = "msg " + (m.from == ME ? "me" : "other");
+
+ div.innerText = m.text;
+
+ document.getElementById("chat").appendChild(div);
+}
+
+function scrollBottom(){
+ const box = document.getElementById("chat");
+ box.scrollTop = box.scrollHeight;
 }
 
 </script>

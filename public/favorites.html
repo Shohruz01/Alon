@@ -85,64 +85,86 @@ body{
 
 <script>
 
-const favs = JSON.parse(localStorage.getItem("favs")) || [];
+fetch("/api/me",{credentials:"include"})
+.then(r=>r.json())
+.then(me=>{
 
-fetch('/api/ads')
-.then(r => r.json())
-.then(data => {
-
- const box = document.getElementById("favAds");
-
- const filtered = data.filter(ad => favs.includes(ad.id));
-
- if(filtered.length === 0){
-  box.innerHTML = `
-   <div class="empty">
-    ❤️ Ҳоло эълони маъқул нест
-   </div>
+ if(!me.logged){
+  document.getElementById("favAds").innerHTML = `
+   <div class="empty">Аввал ворид шавед</div>
   `;
   return;
  }
 
- filtered.forEach(ad => {
+ const uid = me.user.id;
 
-  const img = ad.photos?.[0] || "/noimage.png";
+ fetch('/api/ads')
+ .then(r => r.json())
+ .then(data => {
 
-  const card = document.createElement("div");
-  card.className = "ad-card";
+  const box = document.getElementById("favAds");
 
-  card.innerHTML = `
-   <img src="${img}">
-   <div class="ad-info">
-    <div class="ad-price">💰 ${ad.price}</div>
-    <div class="ad-title">${ad.title}</div>
-   </div>
+  const filtered = data.filter(ad =>
+   ad.likedBy && ad.likedBy.includes(uid)
+  );
 
-   <button class="remove-btn" onclick="removeFav(${ad.id})">
-    ❌ Нест кардан
-   </button>
-  `;
+  if(filtered.length === 0){
+   box.innerHTML = `
+    <div class="empty">
+     ❤️ Ҳоло эълони маъқул нест
+    </div>
+   `;
+   return;
+  }
 
-  box.appendChild(card);
+  filtered.forEach(ad => {
+
+   const img = ad.photos?.[0] || "/noimage.png";
+
+   const card = document.createElement("div");
+card.className = "ad-card";
+
+card.onclick = ()=>{
+ location.href = "/ad.html?id=" + ad.id;
+};   
+
+   card.innerHTML = `
+    <img src="${img}">
+    <div class="ad-info">
+     <div class="ad-price">💰 ${ad.price}</div>
+     <div class="ad-title">${ad.title}</div>
+    </div>
+
+     <button class="remove-btn" onclick="event.stopPropagation(); unlike(${ad.id})">
+     ❌ Нест кардан
+    </button>
+   `;
+
+   box.appendChild(card);
+
+  });
 
  });
 
 });
 
-function removeFav(id){
+// UNLIKE (REMOVE FROM FAVORITES)
+function unlike(adId){
 
- // REMOVE FROM FAVORITES
- let favs = JSON.parse(localStorage.getItem("favs")) || [];
- favs = favs.filter(x => x !== id);
- localStorage.setItem("favs", JSON.stringify(favs));
-
- // REMOVE LIKE COUNT
- let likes = JSON.parse(localStorage.getItem("likes")) || {};
- delete likes[id];
- localStorage.setItem("likes", JSON.stringify(likes));
-
- // REFRESH PAGE
- location.reload();
+ fetch("/api/like",{
+  method:"POST",
+  headers:{"Content-Type":"application/json"},
+  credentials:"include",
+  body:JSON.stringify({ adId })
+ })
+ .then(r=>r.json())
+ .then(d=>{
+  if(d.success){
+   location.reload();
+  }else{
+   alert("Хато шуд");
+  }
+ });
 
 }
 

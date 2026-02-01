@@ -402,19 +402,23 @@ applyLang();
 
 /* ===== PROFILE DATA ===== */
 
-fetch("/api/me")
+fetch("/api/me",{ credentials:"include" })
 .then(r=>r.json())
-.then(u=>{
+.then(d=>{
 
- if(!u) location.href="/login.html";
+ if(!d.logged){
+  location.href="/login.html";
+  return;
+ }
 
- username.innerText="Username: "+(u.username || u.name || "User");
+ const u = d.user;
 
- city.innerText="Шаҳр: "+(u.city || "-");
- year.innerText="Соли таваллуд: "+(u.birthyear || "-");
+ username.innerText = "Username: " + (u.username || u.name || "User");
+ city.innerText = "Шаҳр: " + (u.city || "-");
+ year.innerText = "Соли таваллуд: " + (u.birthyear || "-");
 
  if(u.photo){
-  avatar.src=u.photo;
+  avatar.src = "/" + u.photo.replace(/^\/+/,"") + "?t=" + Date.now();
  }
 
 });

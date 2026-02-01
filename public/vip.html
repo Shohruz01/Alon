@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>VIP Payment</title>
+</head>
+<body style="font-family:system-ui;text-align:center;padding:30px">
+
+<h2>⭐ VIP Эълон</h2>
+
+<p>Эълони шумо 3 рӯз дар боло мемонад</p>
+
+<button id="payBtn" style="padding:15px 25px;font-size:18px">
+💳 Пардохт кардан
+</button>
+
+<script>
+
+const id = new URLSearchParams(location.search).get("id");
+
+document.getElementById("payBtn").onclick = ()=>{
+
+ fetch("/api/vip/create",{
+  method:"POST",
+  headers:{
+   "Content-Type":"application/json"
+  },
+  body:JSON.stringify({ adId:id })
+ })
+ .then(r=>r.json())
+ .then(d=>{
+  if(d.success){
+   location.href = d.payUrl;
+  }
+ });
+
+};
+
+</script>
+
+</body>
+</html>

@@ -56,34 +56,54 @@ body{
 
 <script>
 
-// гирифтани чатҳо аз localStorage
-let chats = JSON.parse(localStorage.getItem('chats')) || [];
+fetch("/api/me",{credentials:"include"})
+.then(r=>r.json())
+.then(me=>{
 
-const box = document.getElementById('chatList');
+ if(!me.logged){
+  location.href="/login.html";
+  return;
+ }
 
-if(chats.length === 0){
- box.innerHTML = '<p style="padding:15px">Паём нест</p>';
-}
+ fetch("/messages.json")
+ .then(r=>r.json())
+ .then(list=>{
 
-chats.forEach(chat => {
+  const my = me.user.id;
 
- const div = document.createElement('div');
- div.className = 'chat-item';
+  const rooms = {};
 
- div.onclick = () => {
-  location.href = '/chat.html?ad=' + chat.adId;
- };
+  list.forEach(m=>{
 
- div.innerHTML = `
-   <div>
-     <b>${chat.title}</b>
-     <div style="font-size:13px;color:gray">Эълон</div>
-   </div>
+   if(m.from==my || m.to==my){
 
-   ${chat.unread > 0 ? `<div class="badge">${chat.unread}</div>` : ''}
- `;
+    const other = m.from==my ? m.to : m.from;
 
- box.appendChild(div);
+    rooms[other] = m;
+
+   }
+
+  });
+
+  Object.keys(rooms).forEach(uid=>{
+
+   const div = document.createElement("div");
+   div.className="chat-item";
+
+   div.innerHTML = `
+    <b>User ${uid}</b><br>
+    <small>${rooms[uid].text}</small>
+   `;
+
+   div.onclick = ()=>{
+    location.href="/chat.html?to="+uid;
+   };
+
+   chatList.appendChild(div);
+
+  });
+
+ });
 
 });
 
