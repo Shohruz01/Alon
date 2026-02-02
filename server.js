@@ -3,33 +3,134 @@ const http = require('http');
 const session = require('express-session');
 const multer = require('multer');
 const sharp = require("sharp");
+const cloudinary = require("cloudinary").v2;
+const { CloudinaryStorage } = require("multer-storage-cloudinary");
 const path = require('path');
 const fs = require("fs");
-let BOOKINGS_CACHE = [];
-let USERS_CACHE = [];
-let ADS_CACHE = [];
-let MESSAGES_CACHE = [];
 
-if(!fs.existsSync("messages.json")){
- fs.writeFileSync("messages.json","[]");
-}
+require("dotenv").config();
+cloudinary.config({
+ cloud_name: process.env.CLOUDINARY_NAME,
+ api_key: process.env.CLOUDINARY_API_KEY,
+ api_secret: process.env.CLOUDINARY_API_SECRET
+});
+const mongoose = require("mongoose");
 
-MESSAGES_CACHE = JSON.parse(fs.readFileSync("messages.json"));
-// ===== REALTIME STATS =====
-let ONLINE_USERS = new Set();
-let ONLINE_CONNECTIONS = 0;
-let totalUsers = 0;
-let bookingLock = false;
+// ================= MONGO CONNECT =================
+
+mongoose.connect(process.env.MONGO_URI)
+.then(() => console.log("✅ MongoDB connected"))
+.catch(err => console.log("❌ Mongo error:", err.message));
+
+// ================= MODELS =================
+
+// USER
+const UserSchema = new mongoose.Schema({
+
+ id:Number,
+
+ username:String,
+ password:String,
+
+ name:String,
+ email:String,
+ photo:String,
+
+ city:String,
+ birthyear:String,
+
+ uid:String, // firebase
+
+ createdAt:String
+
+});
+
+const User = mongoose.model("User", UserSchema);
+
+
+// ADS
+const AdSchema = new mongoose.Schema({
+
+ id:Number,
+
+ title:String,
+ price:String,
+ phone:String,
+ desc:String,
+ category:String,
+ city:String,
+
+ photos:[String],
+
+ userId:Number,
+
+ booking:Boolean,
+
+ time:Number,
+ expireAt:Number,
+
+ vip:Boolean,
+ vipUntil:Number,
+
+ likes:{
+  type:Number,
+  default:0
+ },
+
+ likedBy:[Number],
+
+ views:{
+  type:Number,
+  default:0
+ }
+
+});
+
+const Ad = mongoose.model("Ad", AdSchema);
+
+
+// BOOKINGS
+const BookingSchema = new mongoose.Schema({
+
+ id:Number,
+
+ renterId:Number,
+ ownerId:Number,
+
+ adId:Number,
+
+ date:String,
+ start:String,
+ end:String,
+
+ promo:String,
+
+ status:String,
+
+ created:Number,
+ expireAt:Number,
+
+ finished:Boolean
+
+});
+
+const Booking = mongoose.model("Booking", BookingSchema);
+
+
+// MESSAGES
+const MessageSchema = new mongoose.Schema({
+
+ room:String,
+ from:String,
+ to:String,
+ text:String,
+ time:Number
+
+});
+
+const Message = mongoose.model("Message", MessageSchema);
+
 const app = express();
-const compression = require("compression");
-app.use(compression());
-
-app.use(express.static(path.join(__dirname, 'public')));
-app.use("/uploads",
- express.static("public/uploads",{
-  maxAge:"30d"
- })
-);
 
 const server = http.createServer(app);
 
@@ -54,66 +155,63 @@ app.use(session({
 
 /* ===== FILE INIT ===== */
 
+// folders
 if (!fs.existsSync("temp")) fs.mkdirSync("temp");
-if (!fs.existsSync("public/uploads")) fs.mkdirSync("public/uploads",{recursive:true});
-if (!fs.existsSync('users.json')) fs.writeFileSync('users.json', '[]');
-if (!fs.existsSync('ads.json')) fs.writeFileSync('ads.json', '[]');
-if (!fs.existsSync('bookings.json')) {
- fs.writeFileSync('bookings.json','[]');
-}
+if (!fs.existsSync("public/uploads"))
+ fs.mkdirSync("public/uploads", { recursive: true });
 
-BOOKINGS_CACHE = JSON.parse(fs.readFileSync("bookings.json"));
-USERS_CACHE = JSON.parse(fs.readFileSync("users.json"));
-totalUsers = USERS_CACHE.length;
-ADS_CACHE = JSON.parse(fs.readFileSync("ads.json"));
-if (!fs.existsSync('uploads')) fs.mkdirSync('uploads');
+console.log("✅ Upload folders ready");
 
 /* ===== HELPERS ===== */
 
-function enrichBookings(bookings){
+async function enrichBookings(bookings){
 
- const users = readUsers();
- const ads = readAds();
+ const result = [];
 
- return bookings.map(b => {
+ for(const b of bookings){
 
-  const renter = users.find(u => u.id === b.renterId);
-  const owner = users.find(u => u.id === b.ownerId);
-  const ad = ads.find(a => a.id == b.adId);
+  const renter = await User.findOne({ id: b.renterId });
+  const owner = await User.findOne({ id: b.ownerId });
+  const ad = await Ad.findOne({ id: b.adId });
 
-  return {
-   ...b,
+  result.push({
+
+   ...b._doc,
 
    renterName: renter ? (renter.username || renter.name) : "Номаълум",
    ownerName: owner ? (owner.username || owner.name) : "Номаълум",
    adTitle: ad ? ad.title : "Эълон нест"
-  };
 
- });
+  });
 
+ }
+
+ return result;
 }
 
-const readUsers = () => {
-  try {
-    return JSON.parse(fs.readFileSync('users.json','utf8'));
-  } catch {
-    return [];
-  }
-};
-const writeUsers = d => {
-  fs.writeFileSync('users.json', JSON.stringify(d, null, 2), 'utf8');
-};
+// ===== USERS =====
 
-const readAds = () => {
-  try {
-    return JSON.parse(fs.readFileSync('ads.json','utf8'));
-  } catch {
-    return [];
-  }
-};
-const writeAds = d => {
-  fs.writeFileSync('ads.json', JSON.stringify(d, null, 2), 'utf8');
-};
+function readUsers(){
+ return USERS_CACHE;
+}
+
+function writeUsers(data){
+ USERS_CACHE = data;
+ saveAll();
+}
+
+// ===== ADS =====
+
+async function readUsers(){
+ return await User.find();
+}
+
+async function createUser(data){
+ const user = new User(data);
+ await user.save();
+ return user;
+}
+
 
 /* ===== AUTH ===== */
 
@@ -135,12 +233,14 @@ function auth(req, res, next) {
 
 /* ===== UPLOAD ===== */
 
-const storage = multer.diskStorage({
- destination:(req,file,cb)=>{
-  cb(null,"temp");
- },
- filename:(req,file,cb)=>{
-  cb(null, Date.now() + ".jpg");
+const storage = new CloudinaryStorage({
+ cloudinary: cloudinary,
+ params: {
+  folder: "pibozor",
+  allowed_formats: ["jpg","jpeg","png","webp"],
+  transformation: [
+   { width: 1080, crop: "limit", quality: "auto" }
+  ]
  }
 });
 
@@ -198,88 +298,37 @@ function timeToMinutes(t){
  return h*60 + m;
 }
 
-/* ===== ROUTES ===== */
+// ===== USER MODEL =====
 
-// SIGNUP
-app.post("/signup", (req, res) => {
+app.post("/firebase-login", async (req,res)=>{
 
- const { username, password, firstname, lastname, birthyear, city } = req.body;
+ const { uid, name, email, photo } = req.body;
 
- if(!username || !password){
-  return res.json({
-   success:false,
-   message:"Ҳамаи майдонҳоро пур кун"
+ let user = await User.findOne({ uid });
+
+ if(!user){
+
+  user = await User.create({
+
+   username: name,
+   uid,
+   email,
+   photo
+
   });
+
+  console.log("✅ New Google user saved in Mongo");
  }
 
- let users = readUsers();
+ req.session.user = user;
 
- const exists = users.find(u => u.username === username);
-
- if (exists) {
-  return res.json({
-   success:false,
-   message:"Бо ин ном аллакай корбар ҳаст ❌"
-  });
- }
-
- const newUser = {
-  id: Date.now(),
-  username: username.trim(),
-  password: password.trim(),
-  firstname,
-  lastname,
-  birthyear,
-  city
- };
-
- users.push(newUser);
- writeUsers(users);
- USERS_CACHE = users;
- totalUsers = USERS_CACHE.length;
-sendStats();
-
- return res.json({
-  success:true
- });
+ res.json({ success:true });
 
 });
-
-// LOGIN
-app.post('/login', (req, res) => {
-
-  const username = req.body.username.trim();
-  const password = req.body.password.trim();
-
-  const users = readUsers();
-
-  const user = users.find(u =>
-    u.username === username && u.password === password
-  );
-
-  if (!user) {
-    return res.send('Wrong login');
-  }
-
-  req.session.user = user;
-  res.json({ success:true });
-
-});
-
 
 // PROFILE PAGE
 app.get('/profile', auth, (req, res) => {
  res.sendFile(path.join(process.cwd(), 'public/profile.html'));
-});
-
-
-// LOGOUT
-app.get('/logout', (req, res) => {
-
-  req.session.destroy(() => {
-    res.redirect('/');
-  });
-
 });
 
 
@@ -289,239 +338,313 @@ app.post(
  auth,
  upload.array("photos",5),
  compressImage,
- (req,res)=>{
+ async (req,res)=>{
 
- let images = [];
+ try{
 
- for(const file of req.files){
+  let images = [];
+
+  for(const file of req.files){
 
    const newPath = "public/uploads/" + file.filename;
+   fs.renameSync(file.path,newPath);
 
-  fs.renameSync(file.path,newPath);
+   images.push("/uploads/" + file.filename);
+  }
 
-  images.push("/uploads/" + file.filename);
- }
+  const userId = req.session.user.id;
 
-const ads = readAds();
+  // USER ADS COUNT
+  const myAds = await Ad.find({ userId });
 
- const myAds = ads.filter(a => a.userId === req.session.user.id);
+  const normalCount = myAds.filter(a => !a.booking).length;
+  const bookingCount = myAds.filter(a => a.booking).length;
 
-const normalCount = myAds.filter(a => !a.booking).length;
-const bookingCount = myAds.filter(a => a.booking).length;
+  if(req.body.booking === "true"){
 
-if(req.body.booking === "true"){
- if(bookingCount >= 3){
-  return res.json({
-   success:false,
-   message:"Максимум 3 эълони брон иҷозат аст"
+   if(bookingCount >= 3){
+    return res.json({
+     success:false,
+     message:"Максимум 3 эълони брон иҷозат аст"
+    });
+   }
+
+  }else{
+
+   if(normalCount >= 5){
+    return res.json({
+     success:false,
+     message:"Максимум 5 эълони оддӣ иҷозат аст"
+    });
+   }
+
+  }
+
+  const days = Number(req.body.duration);
+  const expireAt = Date.now() + days * 24 * 60 * 60 * 1000;
+
+  // SAVE TO MONGO
+  const ad = new Ad({
+
+   title:req.body.title,
+   price:req.body.price,
+   phone:req.body.phone,
+   desc:req.body.desc,
+   category:req.body.category,
+   city:req.body.city,
+
+   photos:images,
+
+   userId:userId,
+
+   booking:req.body.booking === "true",
+
+   time:Date.now(),
+   expireAt,
+
+   vip:false,
+   vipUntil:null
+
   });
+
+  await ad.save();
+
+  res.redirect("/profile");
+
  }
-}else{
- if(normalCount >= 5){
-  return res.json({
-   success:false,
-   message:"Максимум 5 эълони оддӣ иҷозат аст"
-  });
+ catch(err){
+
+  console.log("ADD AD ERROR:", err.message);
+
+  res.json({success:false});
+
  }
-}
 
- const days = Number(req.body.duration);
-const expireAt = Date.now() + days * 24 * 60 * 60 * 1000;
-
-
- ads.push({
-  id: Date.now(),
-  title: req.body.title,
-  price: req.body.price,
-  phone: req.body.phone,
-  desc: req.body.desc,
-  category: req.body.category,
-  city: req.body.city,
-  photos: images,
-  userId: req.session.user.id,
-  booking: req.body.booking === "true",
-  time: Date.now(),
-  expireAt: expireAt,
-  vip: false,
-  vipUntil: null
- });
-
- writeAds(ads);
- ADS_CACHE = ads;
-
- res.redirect("/profile");
 });
 
 // DELETE AD
-app.post('/delete-ad/:id', auth, (req, res) => {
+app.post('/delete-ad/:id', auth, async (req, res) => {
 
- const id = Number(req.params.id);
+ try{
 
- let ads = readAds();
+  const id = Number(req.params.id);
 
- const index = ads.findIndex(ad => ad.id === id);
+  if(isNaN(id)){
+   return res.status(400).json({success:false});
+  }
 
- if(index === -1){
-  return res.status(404).json({success:false});
+  const ad = await Ad.findOne({ time: id });
+
+  if(!ad){
+   return res.status(404).json({success:false});
+  }
+
+  // ONLY OWNER
+  if(ad.userId !== req.session.user.id){
+   return res.status(403).json({success:false});
+  }
+
+  // DELETE PHOTOS
+  if(ad.photos){
+   ad.photos.forEach(p=>{
+    const f = "public" + p;
+    if(fs.existsSync(f)) fs.unlinkSync(f);
+   });
+  }
+
+  await Ad.deleteOne({ time: id });
+
+  res.json({ success:true });
+
+ }
+ catch(err){
+
+  console.log("DELETE ERROR:", err.message);
+
+  res.json({success:false});
  }
 
- const ad = ads[index];
+});
 
- // ONLY OWNER
- if(ad.userId !== req.session.user.id){
-  return res.status(403).json({success:false});
+app.get('/api/ads', async (req,res)=>{
+
+ try{
+
+  const ads = await Ad.find().sort({
+   vip:-1,
+   time:-1
+  });
+
+  res.json(ads);
+
+ }
+ catch(err){
+
+  console.log("GET ADS ERROR:", err.message);
+
+  res.json([]);
+
  }
 
- // 🗑 DELETE IMAGES
- if(ad.photos && ad.photos.length){
+});
 
-  ad.photos.forEach(p => {
+app.get("/api/ad-owner/:id", async (req,res)=>{
 
-   const filePath = "public" + p;
+ try{
 
-   if(fs.existsSync(filePath)){
-    fs.unlinkSync(filePath);
-   }
+  const ad = await Ad.findOne({ time: Number(req.params.id) });
 
+  if(!ad){
+   return res.json(null);
+  }
+
+  const owner = await User.findOne({ id: ad.userId });
+
+  if(!owner){
+   return res.json(null);
+  }
+
+  res.json({
+   id: owner.id,
+   username: owner.username || owner.name,
+   city: owner.city || ""
   });
 
  }
+ catch(err){
 
- // 🗑 DELETE AD
- ads.splice(index,1);
+  console.log("OWNER ERROR:", err.message);
 
- writeAds(ads);
+  res.json(null);
 
- res.json({ success:true });
-
-});
-
-app.get('/api/ads', (req,res)=>{
-
- let ads = readAds();
-
- ads.sort((a,b)=>{
-
-  if(a.vip && !b.vip) return -1;
-  if(!a.vip && b.vip) return 1;
-
-  return b.time - a.time;
- });
-
- res.json(ads);
-
-});
-
-app.get("/api/ad-owner/:id",(req,res)=>{
-
- const ads = readAds();
- const users = readUsers();
-
- const ad = ads.find(a => a.id == req.params.id);
-
- if(!ad){
-  return res.json(null);
  }
-
- const owner = users.find(u => u.id === ad.userId);
-
- if(!owner){
-  return res.json(null);
- }
-
- res.json({
-  id: owner.id,
-  username: owner.username || owner.name,
-  city: owner.city
- });
 
 });
 
 // UPDATE AD (EDIT)
 
-app.post('/edit-ad/:id', auth, upload.array('photos', 5), (req, res) => {
+app.post('/edit-ad/:id', auth, upload.array('photos', 5), async (req, res) => {
 
- const id = Number(req.params.id);
+ try{
 
- let ads = readAds();
+  const id = Number(req.params.id);
 
- const index = ads.findIndex(ad => ad.id === id);
+  if(isNaN(id)){
+   return res.json({ success:false });
+  }
 
- if(index === -1){
-  return res.json({ success:false });
+  const ad = await Ad.findOne({ time: id });
+
+  if(!ad){
+   return res.json({ success:false });
+  }
+
+  // ✅ ONLY OWNER
+  if(ad.userId !== req.session.user.id){
+   return res.json({ success:false });
+  }
+
+  // ✅ NEW IMAGES (if uploaded)
+  let images = ad.photos;
+
+  if(req.files && req.files.length){
+
+   images = [];
+
+   for(const file of req.files){
+
+    const newPath = "public/uploads/" + file.filename;
+    fs.renameSync(file.path, newPath);
+
+    images.push("/uploads/" + file.filename);
+   }
+
+  }
+
+  // ✅ UPDATE IN MONGO
+  await Ad.updateOne(
+   { time: id },
+   {
+    $set:{
+     title: req.body.title,
+     price: req.body.price,
+     phone: req.body.phone,
+     desc: req.body.desc,
+     category: req.body.category,
+     city: req.body.city,
+     photos: images
+    }
+   }
+  );
+
+  res.json({ success:true });
+
  }
+ catch(err){
 
- // only owner
- if(ads[index].userId !== req.session.user.id){
-  return res.json({ success:false });
+  console.log("EDIT ERROR:", err.message);
+
+  res.json({ success:false });
+
  }
-
- const images = req.files && req.files.length
- ? req.files.map(f => '/uploads/' + f.filename)
- : ads[index].photos;
-
- ads[index] = {
-  ...ads[index],
-  title: req.body.title,
-  price: req.body.price,
-  phone: req.body.phone,
-  desc: req.body.desc,
-  category: req.body.category,
-  city: req.body.city,
-  photos: images
- };
-
- writeAds(ads);
-
- res.json({ success:true });
 
 });
 
 // MY ADS (PROFILE)
-app.get('/api/my-ads', (req, res) => {
+app.get('/api/my-ads', auth, async (req, res) => {
 
-  if(!req.session.user){
-    return res.json([]);
-  }
+ try{
 
-  const ads = readAds();
+  const uid = req.session.user.id;
 
-  const myAds = ads.filter(ad =>
-    ad.userId === req.session.user.id
-  );
+  const myAds = await Ad.find({ userId: uid })
+                        .sort({ time: -1 });
 
   res.json(myAds);
+
+ }
+ catch(err){
+
+  console.log("MY ADS ERROR:", err.message);
+
+  res.json([]);
+
+ }
+
 });
 
 // GET SINGLE AD
 
  // 🔥 ADD VIEW
 
-app.get('/api/ad/:id', (req, res) => {
+app.get('/api/ad/:id', async (req, res) => {
 
- const ads = readAds();
+ try{
 
- const index = ads.findIndex(a => a.id == req.params.id);
+  const id = Number(req.params.id);
 
- if(index === -1){
-  return res.status(404).json({ error: 'Not found' });
+  const ad = await Ad.findOneAndUpdate(
+   { id },
+   { $inc: { views: 1 } },
+   { new: true }
+  );
+
+  if(!ad){
+   return res.status(404).json({ error: "Not found" });
+  }
+
+  res.json(ad);
+
+ }
+ catch(err){
+
+  console.log("GET SINGLE AD ERROR:", err.message);
+
+  res.status(500).json({ error: "Server error" });
+
  }
 
- // ❌ no auto increment here
- res.json(ads[index]);
-
 });
-
-function sendStats(){
-
- console.log("🔥 SEND STATS => ONLINE:", ONLINE_CONNECTIONS, "TOTAL:", totalUsers);
-
- io.emit("stats",{
-  online: ONLINE_CONNECTIONS,
-  total: totalUsers
- });
-
-}
 
 io.on("connection", socket => {
 
@@ -548,158 +671,209 @@ io.on("connection", socket => {
   sendStats();
  });
 
- // ================= CHAT ROOM =================
+// ================= CHAT ROOM =================
 
- socket.on("joinRoom", room => {
+socket.on("joinRoom", room => {
 
-  if(!room) return;
+ if(!room) return;
 
-  socket.join(room);
+ socket.join(room);
 
-  console.log("📦 JOIN ROOM:", room);
- });
+ console.log("📦 JOIN ROOM:", room);
 
- // ================= SEND MESSAGE =================
+});
 
- socket.on("sendMessage", data => {
 
-  if(!data || !data.room || !data.text) return;
+// ================= SEND MESSAGE =================
 
-  const msg = {
-   room: data.room,
-   from: data.from || null,
-   to: data.to || null,
-   text: data.text,
-   time: Date.now()
-  };
+socket.on("sendMessage", async data => {
 
-  // memory
-  MESSAGES_CACHE.push(msg);
+ if(!data || !data.room || !data.text) return;
 
-  // save disk
-  fs.writeFileSync(
-   "messages.json",
-   JSON.stringify(MESSAGES_CACHE,null,2)
-  );
+ const msg = {
+  room: data.room,
+  from: data.from || null,
+  to: data.to || null,
+  text: data.text,
+  time: Date.now()
+ };
 
-  // send to room
-  io.to(data.room).emit("newMessage", msg);
+ // SAVE TO MONGO
+ await Message.create(msg);
 
-  console.log("💬 MESSAGE SENT:", data.room);
- });
+ // SEND REALTIME
+ io.to(data.room).emit("newMessage", msg);
 
- // ================= DISCONNECT =================
+ console.log("💬 MESSAGE SENT:", data.room);
 
- socket.on("disconnect", () => {
+});
 
-  console.log("❌ SOCKET DISCONNECTED:", socket.id);
+// ================= DISCONNECT =================
 
-  ONLINE_CONNECTIONS--;
+socket.on("disconnect", () => {
 
-  if(ONLINE_CONNECTIONS < 0)
-   ONLINE_CONNECTIONS = 0;
+ console.log("❌ SOCKET DISCONNECTED:", socket.id);
 
-  if(socket.uid){
-   ONLINE_USERS.delete(socket.uid);
+ // safe decrement
+ ONLINE_CONNECTIONS = Math.max(ONLINE_CONNECTIONS - 1, 0);
+
+ // remove user if exists
+ if(socket.uid){
+  ONLINE_USERS.delete(socket.uid);
+ }
+
+ sendStats();
+
+});
+
+ app.post("/firebase-login", async (req, res) => {
+
+ try{
+
+  const { uid, name, email, photo } = req.body;
+
+  if(!uid){
+   return res.json({ success:false });
   }
 
-  sendStats();
- });
+  // 🔍 FIND USER IN MONGO
+  let user = await User.findOne({ uid });
+
+  // 🆕 CREATE IF NOT EXISTS
+  if(!user){
+
+   user = await User.create({
+    uid,
+    username: name,
+    name,
+    email,
+    photo,
+    createdAt: new Date()
+   });
+
+   console.log("✅ New Google user created");
+  }
+
+  // 🔐 CREATE SESSION
+  req.session.user = {
+   id: user._id,
+   uid: user.uid,
+   username: user.username,
+   name: user.name,
+   photo: user.photo
+  };
+
+  res.json({ success:true });
+
+ }
+ catch(err){
+
+  console.log("Firebase login error:", err.message);
+
+  res.status(500).json({
+   success:false
+  });
+
+ }
 
 });
-
-app.post("/firebase-login",(req,res)=>{
-
- // 1. DATA FROM FIREBASE
- const { uid, name, email, photo } = req.body;
-
- // 2. READ USERS.JSON
- let users = readUsers();
-
- // 3. SEARCH USER
- let user = users.find(u => u.uid === uid);
-
- // 4. IF NEW USER → CREATE
- if(!user){
-
-  user = {
- id: Date.now(),
- uid,
- username: name,   // ⭐ муҳим
- name,
- email,
- photo,
- createdAt: new Date().toISOString()
-};
-
-  users.push(user);
-
-  writeUsers(users);
-
- USERS_CACHE = users;
-totalUsers = USERS_CACHE.length;
-sendStats();
-
-  console.log("New Google user created");
- }
 
  // 5. CREATE SESSION
- req.session.user = user;
+req.session.user = {
+ id: user._id,
+ uid: user.uid,
+ username: user.username,
+ name: user.name,
+ photo: user.photo
+};
 
- // 6. RESPONSE TO BROWSER
- res.json({ success:true });
+// 6. RESPONSE
+res.json({ success:true });
 
-});
+app.post("/api/update-profile", auth, async (req,res)=>{
 
-app.post("/api/update-profile", auth, (req,res)=>{
+ try{
 
- let users = readUsers();
+  const { username, city, birthyear } = req.body;
 
- const index = users.findIndex(u=>u.id === req.session.user.id);
+  const updated = await User.findByIdAndUpdate(
+   req.session.user.id,
+   {
+    username,
+    city,
+    birthyear
+   },
+   { new:true }
+  );
 
- if(index === -1){
-  return res.json({success:false});
+  if(!updated){
+   return res.json({ success:false });
+  }
+
+  // update session
+  req.session.user.username = updated.username;
+
+  res.json({ success:true });
+
+ }catch(err){
+  console.log("Update error:", err.message);
+  res.json({ success:false });
  }
 
- users[index].username = req.body.username;
- users[index].city = req.body.city;
- users[index].birthyear = req.body.birthyear;
-
- writeUsers(users);
-
- req.session.user = users[index];
-
-req.session.save(() => {
- res.json({ success:true });
 });
 
-});
-
-app.post("/upload-avatar", auth, upload.single("avatar"), (req,res)=>{
+ app.post("/upload-avatar", auth, upload.single("avatar"), async (req,res)=>{
 
  if(!req.file){
   return res.redirect("/edit-profile.html");
  }
 
- let users = readUsers();
+ try{
 
- const index = users.findIndex(u=>u.id === req.session.user.id);
+  const photoPath = "/uploads/" + req.file.filename;
 
- if(index === -1){
-  return res.redirect("/profile");
+  await User.findByIdAndUpdate(
+   req.session.user.id,
+   { photo: photoPath }
+  );
+
+  req.session.user.photo = photoPath;
+
+  res.redirect("/profile");
+
+ }catch(err){
+
+  console.log("Avatar error:", err.message);
+  res.redirect("/profile");
+
+ }
+
+});
+
+//  MOVE FILE TO PUBLIC
+
+app.post("/upload-avatar", auth, upload.single("avatar"), async (req,res)=>{
+
+ if(!req.file){
+  return res.redirect("/edit-profile.html");
  }
 
  // MOVE FILE TO PUBLIC
- const newPath = "public/uploads/" + req.file.filename;
+ const photoPath = "/uploads/" + req.file.filename;
 
- fs.renameSync(req.file.path, newPath);
+ fs.renameSync(
+  req.file.path,
+  path.join("public", photoPath)
+ );
 
- // SAVE PATH
- users[index].photo = "/uploads/" + req.file.filename;
+ // UPDATE MONGO USER
+ await User.findByIdAndUpdate(
+  req.session.user._id,
+  { photo: photoPath }
+ );
 
- writeUsers(users);
-
- req.session.user = users[index];
+ // UPDATE SESSION
+ req.session.user.photo = photoPath;
 
  req.session.save(()=>{
   res.redirect("/profile");
@@ -707,91 +881,72 @@ app.post("/upload-avatar", auth, upload.single("avatar"), (req,res)=>{
 
 });
 
-app.get("/api/normal-ads",(req,res)=>{
- const ads = readAds();
- const normal = ads.filter(a => !a.booking);
- res.json(normal);
+app.get("/api/normal-ads", async (req,res)=>{
+
+ const ads = await Ad.find({ booking:false })
+ .sort({ time:-1 });
+
+ res.json(ads);
 });
 
-app.get("/api/booking-ads",(req,res)=>{
- const ads = readAds();
- const bookingAds = ads.filter(a => a.booking === true);
- res.json(bookingAds);
+app.get("/api/booking-ads", async (req,res)=>{
+
+ const ads = await Ad.find({ booking:true })
+ .sort({ time:-1 });
+
+ res.json(ads);
 });
 
 // GET BOOKINGS ONLY
-app.get("/api/bookings", auth, (req,res)=>{
- res.json(enrichBookings(BOOKINGS_CACHE));
-});
+app.get("/api/bookings", auth, async (req,res)=>{
 
-app.get("/api/booking/:id", auth, (req,res)=>{
+ const bookings = await Booking.find();
 
- const id = Number(req.params.id);
+ const enriched = await enrichBookingsMongo(bookings);
 
- const booking = BOOKINGS_CACHE.find(b => b.id === id);
-
- if(!booking){
-  return res.status(404).json({success:false});
- }
-
- res.json(booking);
+ res.json(enriched);
 
 });
 
-app.post("/api/request-booking",(req,res)=>{
-
- if(!req.session.user){
-  return res.json({
-   success:false,
-   message:"Аввал ба аккаунт ворид шавед"
-  });
- }
+app.post("/api/request-booking", auth, async (req,res)=>{
 
  const { adId, date, start, end } = req.body;
 
- const ads = readAds();
- const ad = ads.find(a=>a.id==adId);
+ const ad = await Ad.findById(adId);
 
  if(!ad){
   return res.json({success:false,message:"Эълон ёфт нашуд"});
  }
 
- let list = BOOKINGS_CACHE;
+ // ⛔ check busy time
+ const reqStart = timeToMinutes(start);
+ const reqEnd = timeToMinutes(end);
 
- // check busy time
-  const reqStart = timeToMinutes(start);
-const reqEnd = timeToMinutes(end);
-
-const busy = list.find(b => {
-
- if(
-  b.adId != adId ||
-  b.date != date ||
-  b.status !== "confirmed"
- ) return false;
-
- const s = timeToMinutes(b.start);
- const e = timeToMinutes(b.end);
-
- return reqStart < e && reqEnd > s;
-
-});
+ const busy = await Booking.findOne({
+  adId,
+  date,
+  status:"confirmed"
+ });
 
  if(busy){
-  return res.json({
-   success:false,
-   message:"Ин вақт аллакай банд аст"
-  });
+  const s = timeToMinutes(busy.start);
+  const e = timeToMinutes(busy.end);
+
+  if(reqStart < e && reqEnd > s){
+   return res.json({
+    success:false,
+    message:"Ин вақт аллакай банд аст"
+   });
+  }
  }
 
  const promo = "PB-" + Math.random().toString(36).substring(2,8).toUpperCase();
 
  const expireAt = Date.now() + 30 * 60 * 1000;
 
- const booking = {
-  id: Date.now(),
+ const booking = new Booking({
 
-  renterId: req.session.user.id,
+  renterId: req.session.user._id,
   ownerId: ad.userId,
 
   adId,
@@ -800,18 +955,15 @@ const busy = list.find(b => {
   end,
 
   promo,
-  status: "pending",
+  status:"pending",
 
   created: Date.now(),
   expireAt
-};
 
- list.push(booking);
+ });
 
- fs.writeFileSync("bookings.json",JSON.stringify(list,null,2));
- BOOKINGS_CACHE = list;
+ await booking.save();
 
- // ✅ IMPORTANT RESPONSE
  res.json({
   success:true,
   promo,
@@ -819,323 +971,119 @@ const busy = list.find(b => {
  });
 
 });
-
-function minutesToTime(min){
- let h = Math.floor(min/60);
- let m = min%60;
- return String(h).padStart(2,"0")+":"+String(m).padStart(2,"0");
-}
-
-setInterval(()=>{
+setInterval(async ()=>{
 
  const now = Date.now();
 
- let ads = readAds();
- let changed = false;
-
- ads = ads.filter(ad=>{
-
-  if(ad.expireAt && now > ad.expireAt){
-
-   console.log("⏰ EXPIRED AD:", ad.title);
-
-   // DELETE PHOTOS
-   if(ad.photos){
-    ad.photos.forEach(p=>{
-
-     const filePath = "public" + p;
-
-     if(fs.existsSync(filePath)){
-      fs.unlinkSync(filePath);
-     }
-
-    });
-   }
-
-   changed = true;
-   return false;
-  }
-
-  return true;
- });
-
- if(changed){
-  writeAds(ads);
- }
-
-}, 60000);
-
-app.get("/api/my-booking-requests", auth, (req,res)=>{
-
- const uid = req.session.user.id;
-
- const bookings = BOOKINGS_CACHE;
-
- const result = bookings.filter(b =>
-  b.status === "pending" &&
-  (b.ownerId === uid || b.renterId === uid)
+ // expire pending
+ await Booking.updateMany(
+  { status:"pending", expireAt:{ $lt: now } },
+  { $set:{ status:"expired" } }
  );
 
- res.json(enrichBookings(result));
+ // finish confirmed
+ const confirmed = await Booking.find({ status:"confirmed" });
 
-});
+ for(const b of confirmed){
 
-app.get("/api/my-active-bookings", auth, (req,res)=>{
+  const endTime = new Date(b.date+" "+b.end).getTime();
 
- const uid = req.session.user.id;
- const bookings = BOOKINGS_CACHE;
-
- const result = bookings.filter(b =>
-  b.status === "confirmed" &&
-  !b.finished &&
-  (b.ownerId === uid || b.renterId === uid)
- );
-
- res.json(enrichBookings(result));
-
-});
-
-app.get("/booking-action", auth, (req,res)=>{
-
- const { id, action } = req.query;
-
- let list = BOOKINGS_CACHE;
-
- const booking = list.find(b=>b.id == id);
-
- if(!booking){
-  return res.send("Booking not found");
- }
-
- if(booking.ownerId !== req.session.user.id){
- return res.send("Access denied");
-}
-
- if(action === "accept"){
-
- const reqStart = timeToMinutes(booking.start);
- const reqEnd = timeToMinutes(booking.end);
-
- const conflict = list.find(b => {
-
- if(
-  b.id === booking.id ||
-  b.adId != booking.adId ||
-  b.date != booking.date ||
-  b.status !== "confirmed"
- ) return false;
-
- const s = timeToMinutes(b.start);
- const e = timeToMinutes(b.end);
-
- return reqStart < e && reqEnd > s;
-
-});
-
-if(conflict){
- return res.send("❌ Ин вақт аллакай банд аст");
-}
-
- booking.status = "confirmed";
-}
-
- if(action === "reject"){
-  booking.status = "rejected";
-  booking.rejectedAt = Date.now();
- }
-
- fs.writeFileSync("bookings.json",JSON.stringify(list,null,2));
- BOOKINGS_CACHE = list;
-
- res.send(`
-  <h2>✅ Амалиёт анҷом ёфт</h2>
-  <p>Шартнома ${action==="accept"?"қабул":"рад"} карда шуд</p>
- `);
-
-});
-
-app.post("/api/check-promo", (req,res)=>{
-
- const { promo: code } = req.body;
-
- let bookings = BOOKINGS_CACHE;
- let users = readUsers();
-
- const b = bookings.find(x => x.promo === code);
-
- if(!b){
-  return res.json({success:false,message:"Промокод ёфт нашуд"});
- }
-
- // FIND REAL USER
- const u = users.find(x => x.id === b.renterId);
-
- res.json({
-  success:true,
-  booking:{
-   id: b.id,
-   user: u ? (u.username || u.name) : "User",
-   date: b.date,
-   start: b.start,
-   end: b.end
+  if(now > endTime){
+   b.finished = true;
+   await b.save();
   }
+
+ }
+
+},60000);
+app.get("/api/my-booking-requests", auth, async (req,res)=>{
+
+ const uid = req.session.user._id;
+
+ const bookings = await Booking.find({
+  status:"pending",
+  $or:[
+   { ownerId: uid },
+   { renterId: uid }
+  ]
  });
 
+ const result = await enrichBookingsMongo(bookings);
+
+ res.json(result);
+
 });
+app.get("/api/my-active-bookings", auth, async (req,res)=>{
 
-app.post("/api/confirm-booking",(req,res)=>{
- if(bookingLock){
-  return res.json({
-   success:false,
-   message:"⏳ Лутфан интизор шавед..."
-  });
- }
+ const uid = req.session.user._id;
 
- bookingLock = true;
+ const bookings = await Booking.find({
+  status:"confirmed",
+  finished: { $ne:true },
+  $or:[
+   { ownerId: uid },
+   { renterId: uid }
+  ]
+ });
 
- let promo = req.body.promo?.trim().toUpperCase();
+ const result = await enrichBookingsMongo(bookings);
+
+ res.json(result);
+
+});
+app.post("/api/confirm-booking", auth, async (req,res)=>{
+
+ const promo = req.body.promo?.trim().toUpperCase();
 
  if(!promo){
   return res.json({success:false,message:"Код ворид нашуд"});
  }
 
- if(!req.session.user){
-  return res.json({success:false,message:"Login required"});
- }
-
- let list = BOOKINGS_CACHE;
-
- const booking = list.find(b => b.promo === promo);
+ const booking = await Booking.findOne({ promo });
 
  if(!booking){
   return res.json({success:false,message:"Код нодуруст"});
  }
 
- if(booking.ownerId !== req.session.user.id){
-  return res.json({
-   success:false,
-   message:"⛔ Ин брон ба шумо тааллуқ надорад"
-  });
+ if(booking.ownerId != req.session.user._id){
+  return res.json({success:false,message:"⛔ Access denied"});
  }
 
  if(booking.status !== "pending"){
-  return res.json({
-   success:false,
-   message:"Ин код фаъол нест"
-  });
+  return res.json({success:false,message:"Already used"});
  }
 
-// CHECK CONFLICT AGAIN
- const reqStart = timeToMinutes(booking.start);
-const reqEnd = timeToMinutes(booking.end);
-
-const conflict = list.find(b => {
-
- if(
-  b.id === booking.id ||
-  b.adId != booking.adId ||
-  b.date != booking.date ||
-  b.status !== "confirmed"
- ) return false;
-
- const s = timeToMinutes(b.start);
- const e = timeToMinutes(b.end);
-
- return reqStart < e && reqEnd > s;
-
-});
-
-if(conflict){
-
- bookingLock = false;
-
- return res.json({
-  success:false,
-  message:"❌ Ин вақт аллакай тасдиқ шудааст"
- });
-
-}
-
  booking.status = "confirmed";
- booking.state = "active";
  booking.confirmedAt = Date.now();
 
- fs.writeFileSync("bookings.json", JSON.stringify(list,null,2));
- BOOKINGS_CACHE = list;
- bookingLock = false;
+ await booking.save();
 
  res.json({success:true});
 
 });
 
-app.get("/api/my-booking-history", auth, (req,res)=>{
+app.get("/api/my-booking-history", auth, async (req,res)=>{
 
- const uid = req.session.user.id;
- const list = BOOKINGS_CACHE;
+ const uid = req.session.user._id;
 
- const result = list.filter(b =>
-  (b.ownerId === uid || b.renterId === uid) &&
-  (
-   b.status === "rejected" ||
-   b.status === "expired" ||
-   b.finished === true
-  )
- );
-
- res.json(enrichBookings(result));
-
-});
-
-app.post("/api/like",(req,res)=>{
-
- if(!req.session.user){
-  return res.json({success:false,message:"Login required"});
- }
-
- const uid = req.session.user.id;
- const { adId } = req.body;
-
- let ads = readAds();
- const index = ads.findIndex(a => a.id == adId);
-
- if(index === -1){
-  return res.json({success:false});
- }
-
- if(!ads[index].likedBy){
-  ads[index].likedBy = [];
- }
-
- const pos = ads[index].likedBy.indexOf(uid);
-
- // ✅ UNLIKE
- if(pos !== -1){
-
-  ads[index].likedBy.splice(pos,1);
-  ads[index].likes = ads[index].likedBy.length;
-
-  writeAds(ads);
-
-  return res.json({
-   success:true,
-   liked:false,
-   likes: ads[index].likes
-  });
- }
-
- // ✅ LIKE
- ads[index].likedBy.push(uid);
- ads[index].likes = ads[index].likedBy.length;
-
- writeAds(ads);
-
- res.json({
-  success:true,
-  liked:true,
-  likes: ads[index].likes
+ const bookings = await Booking.find({
+  $or:[
+   { ownerId: uid },
+   { renterId: uid }
+  ],
+  $or:[
+   { status:"expired" },
+   { status:"rejected" },
+   { finished:true }
+  ]
  });
 
+ const result = await enrichBookingsMongo(bookings);
+
+ res.json(result);
+
 });
+
 
 app.post("/api/add-view",(req,res)=>{
 
@@ -1152,38 +1100,91 @@ app.post("/api/add-view",(req,res)=>{
  ads[index].views = (ads[index].views || 0) + 1;
 
  writeAds(ads);
+ l
+});
 
+app.post("/api/like", auth, async (req,res)=>{
+
+ const uid = req.session.user._id;
+ const { adId } = req.body;
+
+ const ad = await Ad.findById(adId);
+
+ if(!ad){
+  return res.json({ success:false });
+ }
+
+ if(!ad.likedBy){
+  ad.likedBy = [];
+ }
+
+ const pos = ad.likedBy.indexOf(uid.toString());
+
+ // ✅ UNLIKE
+ if(pos !== -1){
+
+  ad.likedBy.splice(pos,1);
+  ad.likes = ad.likedBy.length;
+
+  await ad.save();
+
+  return res.json({
+   success:true,
+   liked:false,
+   likes: ad.likes
+  });
+ }
+
+ // ✅ LIKE
+ ad.likedBy.push(uid);
+ ad.likes = ad.likedBy.length;
+
+ await ad.save();
+
+ res.json({
+  success:true,
+  liked:true,
+  likes: ad.likes
+ });
+
+});
  res.json({success:true});
 
 });
 
-app.get("/api/user/:id",(req,res)=>{
 
- const uid = Number(req.params.id);
+app.get("/api/user/:id", async (req,res)=>{
+ try{
 
- const users = readUsers();
- const ads = readAds();
+  const uid = req.params.id;
 
- const user = users.find(u=>u.id === uid);
+  const user = await User.findById(uid).lean();
 
- if(!user){
-  return res.json(null);
+  if(!user){
+   return res.json(null);
+  }
+
+  const userAds = await Ad.find({ userId: uid })
+                          .sort({ time:-1 })
+                          .lean();
+
+  res.json({
+   id: user._id,
+   username: user.username || user.name,
+   city: user.city || "",
+   photo: user.photo || "/avatar.png",
+   createdAt: user.createdAt,
+   adsCount: userAds.length,
+   ads: userAds
+  });
+
+ }
+ catch(err){
+  console.log("User API error:", err.message);
+  res.json(null);
  }
 
- const userAds = ads.filter(a=>a.userId === uid);
-
- res.json({
-  id: user.id,
-  username: user.username || user.name,
-  city: user.city || "",
-  photo: user.photo || "/avatar.png",
-  createdAt: user.createdAt || user.id,
-  adsCount: userAds.length,
-  ads: userAds
- });
-
 });
-
 
 // ================= AUTO PING (ANTI SLEEP) =================
 
@@ -1199,122 +1200,208 @@ setInterval(() => {
   });
 }, 5 * 60 * 1000); // every 5 minutes
 
-setInterval(()=>{
+setInterval(async () => {
 
- let ads = readAds();
- const now = Date.now();
+ try{
 
- const filtered = ads.filter(ad => {
+  const now = Date.now();
 
-  if(ad.expireAt && now > ad.expireAt){
-   console.log("Expired removed:", ad.title);
-   return false;
+  const expired = await Ad.find({
+   expireAt: { $lte: now }
+  });
+
+  if(!expired.length) return;
+
+  // DELETE PHOTOS
+  for(const ad of expired){
+
+   if(ad.photos){
+
+    ad.photos.forEach(p => {
+
+     const filePath = "public" + p;
+
+     if(fs.existsSync(filePath)){
+      fs.unlinkSync(filePath);
+     }
+
+    });
+
+   }
+
   }
 
-  return true;
- });
+  // DELETE FROM DB
+  const result = await Ad.deleteMany({
+   expireAt: { $lte: now }
+  });
 
- if(filtered.length !== ads.length){
-  writeAds(filtered);
+  console.log("🧹 Expired ads removed:", result.deletedCount);
+
+ }
+ catch(err){
+  console.log("Expire error:", err.message);
  }
 
-}, 60000); // ҳар 1 дақиқа тафтиш
+}, 60000);
 
-app.get("/api/me", (req,res)=>{
+app.get("/api/me", async (req,res)=>{
 
- if(req.session.user){
+ if(!req.session.user){
+  return res.json({ logged:false });
+ }
+
+ try{
+
+  const user = await User.findById(req.session.user._id)
+                         .select("-password")
+                         .lean();
+
+  if(!user){
+   return res.json({ logged:false });
+  }
+
   res.json({
    logged:true,
-   user:req.session.user
+   user
   });
- }else{
+
+ }
+ catch(err){
+  console.log("ME error:", err.message);
   res.json({ logged:false });
  }
 
 });
 
-app.post("/api/vip/create", auth, (req,res)=>{
+app.post("/api/vip/create", auth, async (req,res)=>{
 
- const { adId, plan } = req.body;
+ try{
 
- let ads = readAds();
+  const { adId, plan } = req.body;
 
- const ad = ads.find(a=>a.id==adId);
+  const ad = await Ad.findOne({ id: Number(adId) });
 
- if(!ad){
-  return res.json({success:false,message:"Эълон ёфт нашуд"});
+  if(!ad){
+   return res.json({
+    success:false,
+    message:"Эълон ёфт нашуд"
+   });
+  }
+
+  // ONLY OWNER
+  if(ad.userId !== req.session.user.id){
+   return res.json({
+    success:false,
+    message:"Иҷозат нест"
+   });
+  }
+
+  let days = 0;
+  let price = 0;
+
+  if(plan === "1"){
+   days = 3;
+   price = 10;
+  }
+  else if(plan === "2"){
+   days = 10;
+   price = 30;
+  }
+  else if(plan === "3"){
+   days = 30;
+   price = 60;
+  }
+  else{
+   return res.json({
+    success:false,
+    message:"Пакет нодуруст"
+   });
+  }
+
+  // ⚠️ payment redirect (test mode)
+  res.json({
+   success:true,
+   payUrl: `/vip-success.html?id=${adId}&days=${days}&price=${price}`
+  });
+
  }
+ catch(err){
 
- if(ad.userId !== req.session.user.id){
-  return res.json({success:false,message:"Иҷозат нест"});
- }
+  console.log("VIP create error:", err.message);
 
- let days = 0;
- let price = 0;
+  res.json({
+   success:false,
+   message:"Server error"
+  });
 
- if(plan == "1"){
-  days = 3;
-  price = 10;
  }
- else if(plan == "2"){
-  days = 10;
-  price = 30;
- }
- else if(plan == "3"){
-  days = 30;
-  price = 60;
- }
- else{
-  return res.json({success:false,message:"Пакет нодуруст"});
- }
-
- // TEST payment redirect
- res.json({
-  success:true,
-  payUrl: `/vip-success.html?id=${adId}&days=${days}&price=${price}`
- });
 
 });
 
-app.post("/api/vip/confirm", auth, (req,res)=>{
+app.post("/api/vip/confirm", auth, async (req,res)=>{
 
- const { adId, days } = req.body;
+ try{
 
- let ads = readAds();
+  const { adId, days } = req.body;
 
- const index = ads.findIndex(a=>a.id==adId);
+  const ad = await Ad.findOne({ id: Number(adId) });
 
- if(index === -1){
-  return res.json({success:false});
+  if(!ad){
+   return res.json({ success:false });
+  }
+
+  // ONLY OWNER
+  if(ad.userId !== req.session.user.id){
+   return res.json({ success:false });
+  }
+
+  ad.vip = true;
+  ad.vipUntil = Date.now() + (Number(days) * 24 * 60 * 60 * 1000);
+
+  await ad.save();
+
+  res.json({ success:true });
+
  }
+ catch(err){
 
- if(ads[index].userId !== req.session.user.id){
-  return res.json({success:false});
+  console.log("VIP confirm error:", err.message);
+
+  res.json({
+   success:false,
+   message:"Server error"
+  });
+
  }
-
- ads[index].vip = true;
- ads[index].vipUntil = Date.now() + (Number(days) * 24 * 60 * 60 * 1000);
-
- writeAds(ads);
-
- res.json({success:true});
 
 });
 
-app.get("/api/messages/:room", auth, (req,res)=>{
+app.get("/api/messages/:room", auth, async (req,res)=>{
 
- const room = req.params.room;
+ try{
 
- const list = MESSAGES_CACHE.filter(m => m.room === room);
+  const room = req.params.room;
 
- res.json(list);
+  const list = await Message
+   .find({ room })
+   .sort({ time: 1 });
+
+  res.json(list);
+
+ }
+ catch(err){
+
+  console.log("Get messages error:", err.message);
+
+  res.json([]);
+
+ }
 
 });
-
 
 /* ===== START SERVER ===== */
 
 server.listen(PORT, () => {
  console.log(`Server running on http://localhost:${PORT}`);
 });
-
