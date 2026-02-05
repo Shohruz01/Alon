@@ -166,13 +166,12 @@ a{
 /* ===== AD CARD ===== */
 
 .ad{
- background:rgba(255,255,255,.08);
- backdrop-filter:blur(20px);
+ background:rgba(255,255,255,.12);
+ backdrop-filter:blur(24px);
  border-radius:18px;
- padding:8px;
-
- box-shadow:0 6px 20px rgba(0,0,0,.35);
- border:1px solid rgba(255,255,255,.1);
+ padding:10px;
+ box-shadow:0 8px 24px rgba(0,0,0,.45);
+ border:1px solid rgba(255,255,255,.16);
 }
 
 .ad img{
@@ -235,6 +234,52 @@ a{
  border-radius:16px;
 }
 
+.logout-btn{
+ position:absolute;
+ right:14px;
+ top:14px;
+
+ border:none;
+ padding:10px 14px;
+ border-radius:12px;
+
+ background:#ff3b3b;
+ color:white;
+ font-weight:800;
+ cursor:pointer;
+
+ box-shadow:0 4px 12px rgba(0,0,0,.15);
+}
+
+.ad h4{
+ color:#ffffff;
+ font-weight:800;
+ font-size:16px;
+ margin-top:6px;
+ letter-spacing:.3px;
+ text-shadow:0 1px 2px rgba(0,0,0,.6);
+}
+
+.ad p{
+ color:#cfd8dc;
+ font-size:13px;
+ margin-top:4px;
+}
+
+.badge{
+ color:#9ad1ff;
+ font-weight:700;
+ font-size:12px;
+ margin-bottom:4px;
+}
+
+.status{
+ color:#7CFF9E;
+ font-weight:800;
+ font-size:12px;
+ margin-bottom:6px;
+}
+
 </style>
 </head>
 
@@ -274,6 +319,10 @@ a{
 <button class="btn green" onclick="addBooking()">📅 Иловаи брон</button>
 
 </div>
+
+<button onclick="logout()" class="logout-btn">
+ 🚪 Баромадан
+</button>
 
 <h3>Тасдиқи брон</h3>
 
@@ -356,8 +405,6 @@ font-weight:700;
 /* ===== SOCKET ===== */
 
 const socket = io();
-const uid = localStorage.getItem("uid");
-socket.emit("join", uid);
 
 /* ===== LANGUAGE ===== */
 
@@ -369,8 +416,8 @@ const TXT={
   home:"Саҳифаи асосӣ",
   edit:"Таҳрири профил",
   add:"Иловаи эълон",
-  active:"🟢 ACTIVE",
-  sold:"🔴 SOLD",
+  active:"🟢 ФАЪОЛ",
+  sold:"🔴 ФУРӮХТА",
   min:"дақ"
  },
  ru:{
@@ -385,10 +432,10 @@ const TXT={
 };
 
 function applyLang(){
- title.innerText=TXT[lang].title;
- homeTxt.innerText=TXT[lang].home;
- editTxt.innerText=TXT[lang].edit;
- addTxt.innerText=TXT[lang].add;
+ document.getElementById("title").innerText = TXT[lang].title;
+ document.getElementById("homeTxt").innerText = TXT[lang].home;
+ document.getElementById("editTxt").innerText = TXT[lang].edit;
+ document.getElementById("addTxt").innerText  = TXT[lang].add;
 }
 
 function setLang(l){
@@ -402,6 +449,8 @@ applyLang();
 
 /* ===== PROFILE DATA ===== */
 
+let MY_ID = null;
+
 fetch("/api/me",{ credentials:"include" })
 .then(r=>r.json())
 .then(d=>{
@@ -413,12 +462,22 @@ fetch("/api/me",{ credentials:"include" })
 
  const u = d.user;
 
- username.innerText = "Username: " + (u.username || u.name || "User");
- city.innerText = "Шаҳр: " + (u.city || "-");
- year.innerText = "Соли таваллуд: " + (u.birthyear || "-");
+ MY_ID = u._id;
+
+ socket.emit("registerUser", MY_ID);
+
+ document.getElementById("username").innerText =
+  u.name || "User";
+
+ document.getElementById("city").innerText =
+  "Шаҳр: " + (u.city || "-");
+
+ document.getElementById("year").innerText =
+  "Соли таваллуд: " + (u.birthyear || "-");
 
  if(u.photo){
-  avatar.src = "/" + u.photo.replace(/^\/+/,"") + "?t=" + Date.now();
+  document.getElementById("avatar").src =
+   u.photo + "?t=" + Date.now();
  }
 
 });
@@ -427,7 +486,7 @@ fetch("/api/me",{ credentials:"include" })
 
 let ALL=[];
 
-fetch("/api/my-ads")
+fetch("/api/my-ads",{credentials:"include"})
 .then(r=>r.json())
 .then(d=>{
  ALL=d;
@@ -435,68 +494,107 @@ fetch("/api/my-ads")
 });
 
 function timeAgo(t){
+
  if(!t) return "";
- let m=(Date.now()-t)/60000;
- if(m<1) return "ҳозир";
- return Math.floor(m)+" "+TXT[lang].min;
+
+ const diff = Date.now() - t;
+
+ const minutes = Math.floor(diff / 60000);
+ const hours   = Math.floor(diff / 3600000);
+ const days    = Math.floor(diff / 86400000);
+
+ if(minutes < 1) return "ҳозир";
+
+ if(minutes < 60)
+  return minutes + " дақ пеш";
+
+ if(hours < 24)
+  return hours + " соат пеш";
+
+ if(days < 7)
+  return days + " рӯз пеш";
+
+ // агар зиёда аз 7 рӯз
+ const date = new Date(t);
+
+ return date.toLocaleDateString("ru-RU", {
+  day:"2-digit",
+  month:"2-digit",
+  year:"numeric"
+ });
 }
 
 function renderAds(){
 
+ const adBox = document.getElementById("adBox");
+
  adBox.innerHTML="";
 
  if(!ALL.length){
-  adBox.innerHTML="<center>Эълон нест</center>";
-  return;
- }
+ adBox.innerHTML = `
+ <div style="
+   grid-column:1/-1;
+   margin-top:40px;
+   text-align:center;
+ ">
+   <div style="
+     background:rgba(255,255,255,.08);
+     padding:18px;
+     border-radius:16px;
+     display:inline-block;
+     color:#fff;
+     font-weight:700;
+     box-shadow:0 8px 25px rgba(0,0,0,.4);
+   ">
+     📭 Эълон нест
+   </div>
+ </div>`;
+ return;
+}
 
  ALL.forEach(ad=>{
+ 
+ console.log("DEBUG AD:", ad);
 
- adBox.innerHTML+=`
+ console.log("AD ID:", ad._id); 
 
-<div class="ad" onclick="openItem(${ad.id}, ${ad.booking})">
+ const img = ad.photos?.[0] || "/noimage.png";
 
-<div class="badge">${ad.category || "AD"}</div>
+ adBox.innerHTML += `
 
-<div class="status">
-${ad.status==="sold"?TXT[lang].sold:TXT[lang].active}
-</div>
+ <div class="ad" onclick="openItem('${String(ad._id)}', ${ad.booking})">
 
-<img src="${ad.photos?.[0] || 'logo.png'}">
+ <div class="badge">${ad.category || "AD"}</div>
 
-<h4>${ad.title}</h4>
+ <div class="status">
+  ${ad.status==="sold" ? TXT[lang].sold : TXT[lang].active}
+ </div>
 
-<p>🕓 ${timeAgo(ad.id)}</p>
+ <img src="${img}">
 
-<div class="actions">
+ <h4>${ad.title}</h4>
 
-<button onclick="event.stopPropagation(); openChat(${ad.userId})">💬</button>
-
-<button onclick="event.stopPropagation(); editAd(${ad.id})">✏</button>
-
-<button onclick="event.stopPropagation(); deleteAd(${ad.id})">🗑</button>
+ <p>🕓 ${timeAgo(ad.time)}</p>
 
 </div>
 
-</div>
 `;
 
  });
 
 }
 
-/* ===== NAVIGATION ===== */
+/* ===== ACTIONS ===== */
 
 function deleteAd(id){
 
- if(!confirm("❗ Оё мехоҳед ин эълонро удалит кунед?")){
-  return;
- }
+ if(!confirm("❗ Эълон нест карда шавад?")) return;
 
- fetch("/delete-ad/"+id,{method:"POST"})
- .then(()=>{
-  location.reload();
- });
+ fetch("/delete-ad/"+id,{
+  method:"POST",
+  credentials:"include"
+ })
+ .then(()=>location.reload());
 
 }
 
@@ -509,7 +607,7 @@ function openChat(id){
 }
 
 function goHome(){
- location.href="/index.html";
+ location.href="/";
 }
 
 function editProfile(){
@@ -525,123 +623,51 @@ function openChats(){
 }
 
 function addBooking(){
- location.href="add-booking.html";
+ location.href="/add-booking.html";
 }
 
-function confirm(){
+/* ===== OPEN ITEM ===== */
 
- const code = document.getElementById("codeInput").value;
+function openItem(id, isBooking){
 
- if(!code){
-  alert("Код ворид кунед");
+ if(!id){
+  alert("ID нест");
   return;
  }
 
- fetch("/api/check-promo",{
-  method:"POST",
-  headers:{
-   "Content-Type":"application/json"
-  },
-  body:JSON.stringify({
-   promo: code
-  })
- })
- .then(r=>r.json())
- .then(d=>{
-
-  if(!d.success){
-   alert(d.message);
-   return;
-  }
-
-  showConfirmBox(d.booking);
-
- });
-
-}
-
-fetch("/api/my-bookings")
-.then(r=>r.json())
-.then(list=>{
-
- const pending = list.filter(b=>b.status==="pending");
- const confirmed = list.filter(b=>b.status==="confirmed");
- const history = list.filter(b=>b.status==="rejected");
-
- render(pending,"pendingBox");
- render(confirmed,"confirmedBox");
- render(history,"historyBox");
-
-});
-
-function render(arr,id){
-
- const box = document.getElementById(id);
-
- box.innerHTML = "";
-
- arr.forEach(b=>{
-
- box.innerHTML += `
-  <div class="${b.status}">
-   📅 ${b.date} | ⏰ ${b.start}-${b.end}
-  </div>
- `;
-
- });
-
-}
-
-
-let CURRENT_BOOKING_ID = null;
-
-function showConfirmBox(b){
-
- CURRENT_BOOKING_ID = b.id;
-
- document.getElementById("confirmInfo").innerHTML = `
-  👤 ${b.user || "User"}<br>
-  📅 ${b.date}<br>
-  ⏰ ${b.start} - ${b.end}
- `;
-
- document.getElementById("confirmBox").style.display="flex";
-
-}
-
-function approve(){
-
- sendDecision("accept");
-
-}
-
-function reject(){
-
- sendDecision("reject");
-
-}
-
-function sendDecision(action){
-
- fetch("/booking-action?id="+CURRENT_BOOKING_ID+"&action="+action)
- .then(()=>{
-  alert("✅ Амалиёт иҷро шуд");
-  document.getElementById("confirmBox").style.display="none";
- });
-
-}
-
-function openAd(id){
- location.href = "/ad.html?id=" + id;
-}
-
-function openItem(id, isBooking){
+ id = String(id);
 
  if(isBooking === true || isBooking === "true"){
   location.href = "/booking-view.html?id=" + id;
  }else{
   location.href = "/ad.html?id=" + id;
  }
+
+}
+
+function logout(){
+
+ fetch("/logout",{
+  method:"GET",
+  credentials:"include"
+ })
+ .then(()=>{
+  location.replace("/"); // back button кор намекунад
+ });
+
+}
+
+function confirm(){
+
+ const code = document.getElementById("codeInput").value.trim();
+
+ if(code.length !== 6){
+  alert("Кодро пурра ворид кунед");
+  return;
+ }
+
+ // 👉 ба саҳифаи шартнома мегузарем
+ location.href = "/confirm.html?code=" + code;
 
 }
 

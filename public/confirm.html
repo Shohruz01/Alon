@@ -1,25 +1,94 @@
 <!DOCTYPE html>
-<html>
+<html lang="tj">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+
 <title>Тасдиқи брон</title>
 
 <style>
-body{font-family:system-ui;background:#f2f4f8}
+
+body{
+ font-family:system-ui;
+ background:#f2f4f8;
+ margin:0;
+ padding:20px;
+}
+
+/* BOX */
+
 .box{
  background:white;
- margin:40px;
- padding:20px;
- border-radius:14px;
+ max-width:400px;
+ margin:60px auto;
+ padding:22px;
+ border-radius:18px;
+ box-shadow:0 10px 25px rgba(0,0,0,.12);
 }
-input,button{
+
+/* HEADER */
+
+.header{
+ text-align:center;
+ font-weight:900;
+ font-size:18px;
+ margin-bottom:12px;
+}
+
+/* INPUT */
+
+input{
  width:100%;
- padding:12px;
- margin-top:10px;
+ padding:14px;
+ border-radius:12px;
+ border:1px solid #ddd;
+ font-size:16px;
+ text-align:center;
+ letter-spacing:4px;
+ font-weight:800;
+ outline:none;
 }
-.ok{background:#27ae60;color:white}
-.no{background:#e74c3c;color:white}
+
+/* BUTTONS */
+
+.btn{
+ width:100%;
+ padding:14px;
+ border:none;
+ border-radius:12px;
+ font-weight:800;
+ font-size:15px;
+ margin-top:12px;
+ cursor:pointer;
+}
+
+.ok{
+ background:#27ae60;
+ color:white;
+}
+
+.no{
+ background:#e74c3c;
+ color:white;
+}
+
+/* LANG */
+
+.lang{
+ text-align:center;
+ margin-bottom:10px;
+}
+
+.lang button{
+ border:none;
+ background:#2563eb;
+ color:white;
+ padding:6px 12px;
+ border-radius:10px;
+ font-weight:700;
+ margin:0 4px;
+}
+
 </style>
 </head>
 
@@ -27,34 +96,147 @@ input,button{
 
 <div class="box">
 
-<h3>Коди брон</h3>
+ <div class="lang">
+  <button onclick="setLang('tj')">TJ</button>
+  <button onclick="setLang('ru')">RU</button>
+ </div>
 
-<input id="code" placeholder="6 рақам">
+ <div id="titleTxt" class="header">
+  🔐 Тасдиқи брон
+ </div>
 
-<button class="ok" onclick="send('ok')">Тасдиқ</button>
-<button class="no" onclick="send('no')">Рад кардан</button>
+ <input
+  id="codeInput"
+  maxlength="6"
+  inputmode="numeric"
+  placeholder="000000"
+ >
+
+ <button id="okBtn" class="btn ok" onclick="send('ok')">
+  Тасдиқ
+ </button>
+
+ <button id="noBtn" class="btn no" onclick="send('no')">
+  Рад кардан
+ </button>
 
 </div>
 
 <script>
 
-function send(action){
+/* ================= LANGUAGE ================= */
 
- const code=document.getElementById("code").value;
+let lang = localStorage.getItem("lang") || "tj";
 
- fetch("/api/confirm-booking",{
-  method:"POST",
-  headers:{'Content-Type':'application/json'},
-  body:JSON.stringify({code,action})
+const TXT = {
+
+ tj:{
+  title:"🔐 Тасдиқи брон",
+  ok:"Тасдиқ",
+  no:"Рад кардан",
+  success:"Амалиёт иҷро шуд ✅",
+  error:"Код нодуруст ё муҳлаташ гузаштааст ❌",
+  login:"Аввал ба аккаунт ворид шавед"
+ },
+
+ ru:{
+  title:"🔐 Подтверждение брони",
+  ok:"Подтвердить",
+  no:"Отклонить",
+  success:"Операция выполнена ✅",
+  error:"Код неверный или истёк ❌",
+  login:"Сначала войдите в аккаунт"
+ }
+
+};
+
+function setLang(l){
+ lang=l;
+ localStorage.setItem("lang",l);
+ applyLang();
+}
+
+function applyLang(){
+ titleTxt.innerText = TXT[lang].title;
+}
+
+applyLang();
+
+/* ================= READ CODE FROM URL ================= */
+
+const params = new URLSearchParams(location.search);
+const CODE = params.get("code");
+
+if(CODE){
+ loadBookingInfo(CODE);
+}else{
+ document.getElementById("codeInput").style.display="block";
+}
+
+/* ================= LOAD BOOKING INFO ================= */
+
+function loadBookingInfo(code){
+
+ fetch("/api/booking-by-code/"+code,{
+  credentials:"include"
  })
  .then(r=>r.json())
  .then(d=>{
 
-  if(d.success)
-   alert("Амалиёт иҷро шуд ✅");
-  else
-   alert("Код нодуруст ё бекор шудааст ❌");
+  if(!d.success){
+   alert("Booking not found");
+   return;
+  }
 
+  document.querySelector(".box").innerHTML = `
+
+   <div class="header">📄 Тасдиқи брон</div>
+
+   <p><b>Эълон:</b> ${d.ad}</p>
+   <p><b>Иҷорагир:</b> ${d.renter}</p>
+   <p><b>Сана:</b> ${d.date}</p>
+   <p><b>Вақт:</b> ${d.start} - ${d.end}</p>
+
+   <button class="btn ok" onclick="sendConfirm('${code}','ok')">
+    ${TXT[lang].ok}
+   </button>
+
+   <button class="btn no" onclick="sendConfirm('${code}','no')">
+    ${TXT[lang].no}
+   </button>
+  `;
+
+ });
+
+}
+
+/* ================= CONFIRM ACTION ================= */
+
+function sendConfirm(code, action){
+
+ fetch("/api/confirm-booking",{
+  method:"POST",
+  headers:{ "Content-Type":"application/json" },
+  credentials:"include",
+  body:JSON.stringify({ code, action })
+ })
+ .then(r=>r.json())
+ .then(d=>{
+
+  if(d.success){
+
+   alert("Тасдиқ шуд ✅");
+
+   // 👉 гузариш ба бронҳои фаъол
+   location.href = "/booking_active.html";
+   return;
+  }
+
+  alert("Хато ❌");
+
+ })
+ .catch(()=>{
+  alert("Server error");
  });
 
 }

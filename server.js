@@ -1,1407 +1,1416 @@
-const express = require('express');
-const http = require('http');
-const session = require('express-session');
-const multer = require('multer');
-const sharp = require("sharp");
-const cloudinary = require("cloudinary").v2;
-const { CloudinaryStorage } = require("multer-storage-cloudinary");
-const path = require('path');
-const fs = require("fs");
-
 require("dotenv").config();
-cloudinary.config({
- cloud_name: process.env.CLOUDINARY_NAME,
- api_key: process.env.CLOUDINARY_API_KEY,
- api_secret: process.env.CLOUDINARY_API_SECRET
-});
+
+const express = require("express");
+const http = require("http");
+const session = require("express-session");
+const multer = require("multer");
+const Jimp = require("jimp");
+const path = require("path");
+const fs = require("fs");
+const compression = require("compression");
+const minifyHTML = require("express-minify-html-terser");
 const mongoose = require("mongoose");
 
-// ================= MONGO CONNECT =================
+// ================= MONGO =================
 
-mongoose.connect(process.env.MONGO_URI)
-.then(() => console.log("✅ MongoDB connected"))
-.catch(err => console.log("❌ Mongo error:", err.message));
+mongoose.connect(
+ process.env.MONGO_URI || "mongodb://127.0.0.1:27017/pibozor"
+)
+.then(()=>console.log("✅ Mongo connected"))
+.catch(err=>console.log("❌ Mongo error:",err));
 
-// ================= MODELS =================
+// ================= SCHEMA =================
 
-// USER
 const UserSchema = new mongoose.Schema({
 
- id:Number,
+ username:String, // system id
+ name:String,     // DISPLAY NAME ✅
 
- username:String,
- password:String,
-
- name:String,
  email:String,
  photo:String,
 
  city:String,
  birthyear:String,
 
- uid:String, // firebase
+ createdAt:{type:Date,default:Date.now},
 
- createdAt:String
+ lastSeen:{
+ type:Number,
+ default: Date.now
+}
 
 });
 
-const User = mongoose.model("User", UserSchema);
-
-
-// ADS
 const AdSchema = new mongoose.Schema({
 
- id:Number,
-
  title:String,
- price:String,
+ price:Number,
  phone:String,
+ whatsapp:String,
  desc:String,
+
  category:String,
+ sub:String,
  city:String,
 
  photos:[String],
 
- userId:Number,
+ userId:String,
 
  booking:Boolean,
 
  time:Number,
  expireAt:Number,
 
- vip:Boolean,
+ vip:{type:Boolean,default:false},
  vipUntil:Number,
 
- likes:{
-  type:Number,
-  default:0
- },
+ likes:{type:Number,default:0},
+ likedBy:[String],
 
- likedBy:[Number],
-
- views:{
-  type:Number,
-  default:0
- }
+ views:{type:Number,default:0},
+ viewedBy:[String]
 
 });
 
-const Ad = mongoose.model("Ad", AdSchema);
-
-
-// BOOKINGS
 const BookingSchema = new mongoose.Schema({
 
- id:Number,
+ adId:{
+  type: mongoose.Schema.Types.ObjectId,
+  ref: "Ad",
+  required: true,
+  index: true
+ },
 
- renterId:Number,
- ownerId:Number,
+ renterId:{
+  type: mongoose.Schema.Types.ObjectId,
+  ref: "User",
+  required: true,
+  index: true
+ },
 
- adId:Number,
+ ownerId:{
+  type: mongoose.Schema.Types.ObjectId,
+  ref: "User",
+  required: true,
+  index: true
+ },
 
- date:String,
- start:String,
- end:String,
+ date:{
+  type: String,
+  required: true
+ },
 
- promo:String,
+ start:{
+  type: String,
+  required: true
+ },
 
- status:String,
+ end:{
+  type: String,
+  required: true
+ },
 
- created:Number,
- expireAt:Number,
+ promo:{
+  type: String,
+  index: true
+ },
 
- finished:Boolean
+ status:{
+  type: String,
+  enum:["pending","confirmed","rejected","expired"],
+  default:"pending",
+  index:true
+ },
+
+ created:{
+  type: Number,
+  default: Date.now
+ },
+
+ expireAt:{
+  type: Number,
+  index:true
+ },
+
+ historyExpireAt:{
+ type:Date,
+ index:{ expireAfterSeconds:0 }
+}
 
 });
 
-const Booking = mongoose.model("Booking", BookingSchema);
-
-
-// MESSAGES
 const MessageSchema = new mongoose.Schema({
 
  room:String,
+
  from:String,
  to:String,
+
  text:String,
- time:Number
+
+ time:{
+  type:Number
+ },
+
+ read:{ type:Boolean, default:false }
 
 });
 
-const Message = mongoose.model("Message", MessageSchema);
+
+// ✅ AUTO DELETE AFTER 10 DAYS
+MessageSchema.index(
+ { time: 1 },
+ { expireAfterSeconds: 60 * 60 * 24 * 10 }
+);
+
+const User = mongoose.model("User",UserSchema);
+const Ad = mongoose.model("Ad",AdSchema);
+const Booking = mongoose.model("Booking",BookingSchema);
+const Message = mongoose.model("Message",MessageSchema);
+
+// ================= APP =================
 
 const app = express();
+app.use(express.static(path.join(__dirname,"public")));
 
+app.use("/uploads", express.static(path.join(__dirname,"public/uploads")));
 const server = http.createServer(app);
 
-const { Server } = require('socket.io');
+const { Server } = require("socket.io");
 const io = new Server(server);
+
 const PORT = 3000;
 
-/* ===== MIDDLEWARE ===== */
+// ================= MIDDLEWARE =================
 
-app.use(express.urlencoded({ extended: true }));
+app.use(compression());
 app.use(express.json());
+app.use(express.urlencoded({extended:true}));
 
+// ✅ SESSION
 app.use(session({
-  secret: 'pibozor_secret',
-  resave: false,
-  saveUninitialized: false,
-  cookie:{
- maxAge:1000*60*60*24,
- sameSite:"lax"
-}
+ secret:"pibozor_secret",
+ resave:false,
+ saveUninitialized:false,
+ cookie:{
+  maxAge:1000*60*60*24,
+  sameSite:"lax"
+ }
 }));
 
-/* ===== FILE INIT ===== */
-
-// folders
-if (!fs.existsSync("temp")) fs.mkdirSync("temp");
-if (!fs.existsSync("public/uploads"))
- fs.mkdirSync("public/uploads", { recursive: true });
-
-console.log("✅ Upload folders ready");
-
-/* ===== HELPERS ===== */
-
-async function enrichBookings(bookings){
-
- const result = [];
-
- for(const b of bookings){
-
-  const renter = await User.findOne({ id: b.renterId });
-  const owner = await User.findOne({ id: b.ownerId });
-  const ad = await Ad.findOne({ id: b.adId });
-
-  result.push({
-
-   ...b._doc,
-
-   renterName: renter ? (renter.username || renter.name) : "Номаълум",
-   ownerName: owner ? (owner.username || owner.name) : "Номаълум",
-   adTitle: ad ? ad.title : "Эълон нест"
-
-  });
-
- }
-
- return result;
-}
-
-// ===== USERS =====
-
-function readUsers(){
- return USERS_CACHE;
-}
-
-function writeUsers(data){
- USERS_CACHE = data;
- saveAll();
-}
-
-// ===== ADS =====
-
-async function readUsers(){
- return await User.find();
-}
-
-async function createUser(data){
- const user = new User(data);
- await user.save();
- return user;
-}
-
-
-/* ===== AUTH ===== */
+// ================= AUTH =================
 
 function auth(req, res, next) {
 
- if(!req.session.user){
+ if (!req.session.user) {
 
-  // IF API REQUEST
-  if(req.headers.accept?.includes("application/json")){
-   return res.status(401).json({ logged:false });
+  const wantsJSON =
+    req.headers.accept?.includes("application/json") ||
+    req.headers["content-type"]?.includes("application/json") ||
+    req.xhr ||
+    req.path.startsWith("/api");
+
+  if (wantsJSON) {
+    return res.status(401).json({ logged: false });
   }
 
-  // IF PAGE REQUEST
   return res.redirect("/login.html");
  }
 
  next();
 }
 
-/* ===== UPLOAD ===== */
+app.post("/firebase-login", async (req, res) => {
 
-const storage = new CloudinaryStorage({
- cloudinary: cloudinary,
- params: {
-  folder: "pibozor",
-  allowed_formats: ["jpg","jpeg","png","webp"],
-  transformation: [
-   { width: 1080, crop: "limit", quality: "auto" }
-  ]
- }
-});
+ const { email, displayName, photoURL } = req.body;
 
-const upload = multer({
- storage,
- limits:{
-  fileSize: 20 * 1024 * 1024
- }
-});
-
-
-async function compressImage(req, res, next) {
-
- if (!req.files) return next();
-
- for (const file of req.files) {
-
-  let input = file.path;
-  let output = file.path;
-
-  let quality = 80;
-  let size = 999999;
-
-  // Resize first (mobile optimal)
-  let image = sharp(input).resize({
-   width: 1080,
-   withoutEnlargement: true
-  });
-
-  // LOOP UNTIL < 80KB
-  while (size > 80 * 1024 && quality >= 40) {
-
-   await image
-    .jpeg({
-     quality: quality,
-     mozjpeg: true
-    })
-    .toFile(output + "_tmp.jpg");
-
-   size = fs.statSync(output + "_tmp.jpg").size;
-
-   quality -= 10;
-  }
-
-  // Replace original
-  fs.renameSync(output + "_tmp.jpg", output);
-
+ if (!email) {
+  return res.json({ success:false });
  }
 
- next();
-}
+ let user = await User.findOne({ email });
 
-function timeToMinutes(t){
- const [h,m] = t.split(":").map(Number);
- return h*60 + m;
-}
-
-// ===== USER MODEL =====
-
-app.post("/firebase-login", async (req,res)=>{
-
- const { uid, name, email, photo } = req.body;
-
- let user = await User.findOne({ uid });
-
- if(!user){
+ if (!user) {
 
   user = await User.create({
 
-   username: name,
-   uid,
-   email,
-   photo
+   username: email.split("@")[0], // SYSTEM
+   name: displayName || "",       // DISPLAY NAME
+   email: email,
+   photo: photoURL || "",
+   city: "",
+   birthyear: ""
 
   });
 
-  console.log("✅ New Google user saved in Mongo");
+ } else {
+
+  // ✅ UPDATE GOOGLE NAME IF CHANGED
+  await User.updateOne(
+   { _id: user._id },
+   {
+    name: displayName || user.name,
+    photo: photoURL || user.photo
+   }
+  );
+
  }
 
- req.session.user = user;
+ const updated = await User.findOne({ email });
+
+ req.session.user = updated;
 
  res.json({ success:true });
 
 });
 
-// PROFILE PAGE
-app.get('/profile', auth, (req, res) => {
- res.sendFile(path.join(process.cwd(), 'public/profile.html'));
-});
-
-
-// ADD AD
-app.post(
- "/add-ad",
- auth,
- upload.array("photos",5),
- compressImage,
- async (req,res)=>{
+app.post("/api/update-profile", auth, async (req, res) => {
 
  try{
 
-  let images = [];
-
-  for(const file of req.files){
-
-   const newPath = "public/uploads/" + file.filename;
-   fs.renameSync(file.path,newPath);
-
-   images.push("/uploads/" + file.filename);
-  }
-
-  const userId = req.session.user.id;
-
-  // USER ADS COUNT
-  const myAds = await Ad.find({ userId });
-
-  const normalCount = myAds.filter(a => !a.booking).length;
-  const bookingCount = myAds.filter(a => a.booking).length;
-
-  if(req.body.booking === "true"){
-
-   if(bookingCount >= 3){
-    return res.json({
-     success:false,
-     message:"Максимум 3 эълони брон иҷозат аст"
-    });
-   }
-
-  }else{
-
-   if(normalCount >= 5){
-    return res.json({
-     success:false,
-     message:"Максимум 5 эълони оддӣ иҷозат аст"
-    });
-   }
-
-  }
-
-  const days = Number(req.body.duration);
-  const expireAt = Date.now() + days * 24 * 60 * 60 * 1000;
-
-  // SAVE TO MONGO
-  const ad = new Ad({
-
-   title:req.body.title,
-   price:req.body.price,
-   phone:req.body.phone,
-   desc:req.body.desc,
-   category:req.body.category,
-   city:req.body.city,
-
-   photos:images,
-
-   userId:userId,
-
-   booking:req.body.booking === "true",
-
-   time:Date.now(),
-   expireAt,
-
-   vip:false,
-   vipUntil:null
-
-  });
-
-  await ad.save();
-
-  res.redirect("/profile");
-
- }
- catch(err){
-
-  console.log("ADD AD ERROR:", err.message);
-
-  res.json({success:false});
-
- }
-
-});
-
-// DELETE AD
-app.post('/delete-ad/:id', auth, async (req, res) => {
-
- try{
-
-  const id = Number(req.params.id);
-
-  if(isNaN(id)){
-   return res.status(400).json({success:false});
-  }
-
-  const ad = await Ad.findOne({ time: id });
-
-  if(!ad){
-   return res.status(404).json({success:false});
-  }
-
-  // ONLY OWNER
-  if(ad.userId !== req.session.user.id){
-   return res.status(403).json({success:false});
-  }
-
-  // DELETE PHOTOS
-  if(ad.photos){
-   ad.photos.forEach(p=>{
-    const f = "public" + p;
-    if(fs.existsSync(f)) fs.unlinkSync(f);
-   });
-  }
-
-  await Ad.deleteOne({ time: id });
-
-  res.json({ success:true });
-
- }
- catch(err){
-
-  console.log("DELETE ERROR:", err.message);
-
-  res.json({success:false});
- }
-
-});
-
-app.get('/api/ads', async (req,res)=>{
-
- try{
-
-  const ads = await Ad.find().sort({
-   vip:-1,
-   time:-1
-  });
-
-  res.json(ads);
-
- }
- catch(err){
-
-  console.log("GET ADS ERROR:", err.message);
-
-  res.json([]);
-
- }
-
-});
-
-app.get("/api/ad-owner/:id", async (req,res)=>{
-
- try{
-
-  const ad = await Ad.findOne({ time: Number(req.params.id) });
-
-  if(!ad){
-   return res.json(null);
-  }
-
-  const owner = await User.findOne({ id: ad.userId });
-
-  if(!owner){
-   return res.json(null);
-  }
-
-  res.json({
-   id: owner.id,
-   username: owner.username || owner.name,
-   city: owner.city || ""
-  });
-
- }
- catch(err){
-
-  console.log("OWNER ERROR:", err.message);
-
-  res.json(null);
-
- }
-
-});
-
-// UPDATE AD (EDIT)
-
-app.post('/edit-ad/:id', auth, upload.array('photos', 5), async (req, res) => {
-
- try{
-
-  const id = Number(req.params.id);
-
-  if(isNaN(id)){
-   return res.json({ success:false });
-  }
-
-  const ad = await Ad.findOne({ time: id });
-
-  if(!ad){
-   return res.json({ success:false });
-  }
-
-  // ✅ ONLY OWNER
-  if(ad.userId !== req.session.user.id){
-   return res.json({ success:false });
-  }
-
-  // ✅ NEW IMAGES (if uploaded)
-  let images = ad.photos;
-
-  if(req.files && req.files.length){
-
-   images = [];
-
-   for(const file of req.files){
-
-    const newPath = "public/uploads/" + file.filename;
-    fs.renameSync(file.path, newPath);
-
-    images.push("/uploads/" + file.filename);
-   }
-
-  }
-
-  // ✅ UPDATE IN MONGO
-  await Ad.updateOne(
-   { time: id },
-   {
-    $set:{
-     title: req.body.title,
-     price: req.body.price,
-     phone: req.body.phone,
-     desc: req.body.desc,
-     category: req.body.category,
-     city: req.body.city,
-     photos: images
-    }
-   }
-  );
-
-  res.json({ success:true });
-
- }
- catch(err){
-
-  console.log("EDIT ERROR:", err.message);
-
-  res.json({ success:false });
-
- }
-
-});
-
-// MY ADS (PROFILE)
-app.get('/api/my-ads', auth, async (req, res) => {
-
- try{
-
-  const uid = req.session.user.id;
-
-  const myAds = await Ad.find({ userId: uid })
-                        .sort({ time: -1 });
-
-  res.json(myAds);
-
- }
- catch(err){
-
-  console.log("MY ADS ERROR:", err.message);
-
-  res.json([]);
-
- }
-
-});
-
-// GET SINGLE AD
-
- // 🔥 ADD VIEW
-
-app.get('/api/ad/:id', async (req, res) => {
-
- try{
-
-  const id = Number(req.params.id);
-
-  const ad = await Ad.findOneAndUpdate(
-   { id },
-   { $inc: { views: 1 } },
-   { new: true }
-  );
-
-  if(!ad){
-   return res.status(404).json({ error: "Not found" });
-  }
-
-  res.json(ad);
-
- }
- catch(err){
-
-  console.log("GET SINGLE AD ERROR:", err.message);
-
-  res.status(500).json({ error: "Server error" });
-
- }
-
-});
-
-io.on("connection", socket => {
-
- console.log("✅ SOCKET CONNECTED:", socket.id);
-
- // ================= VISITOR CONNECT =================
-
- ONLINE_CONNECTIONS++;
-
- sendStats();
-
- // ================= REGISTER USER =================
-
- socket.on("registerUser", uid => {
-
-  if(!uid) return;
-
-  console.log("📥 REGISTER USER:", uid);
-
-  socket.uid = uid;
-
-  ONLINE_USERS.add(uid);
-
-  sendStats();
- });
-
-// ================= CHAT ROOM =================
-
-socket.on("joinRoom", room => {
-
- if(!room) return;
-
- socket.join(room);
-
- console.log("📦 JOIN ROOM:", room);
-
-});
-
-
-// ================= SEND MESSAGE =================
-
-socket.on("sendMessage", async data => {
-
- if(!data || !data.room || !data.text) return;
-
- const msg = {
-  room: data.room,
-  from: data.from || null,
-  to: data.to || null,
-  text: data.text,
-  time: Date.now()
- };
-
- // SAVE TO MONGO
- await Message.create(msg);
-
- // SEND REALTIME
- io.to(data.room).emit("newMessage", msg);
-
- console.log("💬 MESSAGE SENT:", data.room);
-
-});
-
-// ================= DISCONNECT =================
-
-socket.on("disconnect", () => {
-
- console.log("❌ SOCKET DISCONNECTED:", socket.id);
-
- // safe decrement
- ONLINE_CONNECTIONS = Math.max(ONLINE_CONNECTIONS - 1, 0);
-
- // remove user if exists
- if(socket.uid){
-  ONLINE_USERS.delete(socket.uid);
- }
-
- sendStats();
-
-});
-
- app.post("/firebase-login", async (req, res) => {
-
- try{
-
-  const { uid, name, email, photo } = req.body;
-
-  if(!uid){
-   return res.json({ success:false });
-  }
-
-  // 🔍 FIND USER IN MONGO
-  let user = await User.findOne({ uid });
-
-  // 🆕 CREATE IF NOT EXISTS
-  if(!user){
-
-   user = await User.create({
-    uid,
-    username: name,
-    name,
-    email,
-    photo,
-    createdAt: new Date()
-   });
-
-   console.log("✅ New Google user created");
-  }
-
-  // 🔐 CREATE SESSION
-  req.session.user = {
-   id: user._id,
-   uid: user.uid,
-   username: user.username,
-   name: user.name,
-   photo: user.photo
-  };
-
-  res.json({ success:true });
-
- }
- catch(err){
-
-  console.log("Firebase login error:", err.message);
-
-  res.status(500).json({
-   success:false
-  });
-
- }
-
-});
-
- // 5. CREATE SESSION
-req.session.user = {
- id: user._id,
- uid: user.uid,
- username: user.username,
- name: user.name,
- photo: user.photo
-};
-
-// 6. RESPONSE
-res.json({ success:true });
-
-app.post("/api/update-profile", auth, async (req,res)=>{
-
- try{
-
-  const { username, city, birthyear } = req.body;
+  const { name, city, birthyear } = req.body;
 
   const updated = await User.findByIdAndUpdate(
-   req.session.user.id,
+   req.session.user._id,
    {
-    username,
+    name,
     city,
     birthyear
    },
    { new:true }
   );
 
-  if(!updated){
-   return res.json({ success:false });
-  }
-
-  // update session
-  req.session.user.username = updated.username;
+  req.session.user = updated;
 
   res.json({ success:true });
 
- }catch(err){
-  console.log("Update error:", err.message);
-  res.json({ success:false });
+ }catch(e){
+
+  console.log("PROFILE UPDATE ERROR:", e);
+  res.status(500).json({ success:false });
+
  }
 
 });
 
- app.post("/upload-avatar", auth, upload.single("avatar"), async (req,res)=>{
+// ================= IMAGE UPLOAD =================
 
- if(!req.file){
-  return res.redirect("/edit-profile.html");
+if(!fs.existsSync("public/uploads")){
+ fs.mkdirSync("public/uploads",{recursive:true});
+}
+
+const storage = multer.diskStorage({
+ destination:(req,file,cb)=>{
+  cb(null,"public/uploads");
+ },
+ filename:(req,file,cb)=>{
+  cb(null, Date.now()+"-"+file.originalname);
  }
+});
+
+const upload = multer({
+ storage,
+ limits:{ fileSize: 20 * 1024 * 1024 }
+});
+
+async function compressImage(req, res, next) {
+
+ if (!req.files || req.files.length === 0) return next();
+
+ try {
+
+  for (const file of req.files) {
+
+   let img = await Jimp.read(file.path);
+
+   // 📏 resize барои нигоҳ доштани сифат
+   if (img.getWidth() > 720) {
+    img.resize(720, Jimp.AUTO);
+   }
+
+   // 📦 ҳам PNG ҳам JPG → JPG мегардонем
+   let newPath = file.path.replace(/\.(png|jpeg|jpg)$/i, ".jpg");
+
+   let quality = 60;
+
+   while(true){
+
+    await img
+     .quality(quality)
+     .writeAsync(newPath);
+
+    const sizeKB = fs.statSync(newPath).size / 1024;
+
+    // 🎯 target 60KB
+    if(sizeKB <= 60 || quality <= 40){
+     break;
+    }
+
+    quality -= 5;
+   }
+
+   // ❌ delete original
+   if(file.path !== newPath){
+    fs.unlinkSync(file.path);
+   }
+
+   // update multer
+   file.filename = path.basename(newPath);
+   file.path = newPath;
+
+  }
+
+  next();
+
+ } catch (err) {
+
+  console.log("COMPRESS ERROR:", err);
+  next();
+
+ }
+}
+
+// ================= AVATAR UPLOAD =================
+
+app.post("/upload-avatar",
+ auth,
+ upload.single("avatar"),
+ async (req,res)=>{
+
+  try{
+
+   if(!req.file){
+    return res.status(400).json({ success:false });
+   }
+
+   const filePath = req.file.path;
+
+   const img = await Jimp.read(filePath);
+
+   // ===== CROP CENTER SQUARE =====
+
+   const size = Math.min(
+    img.getWidth(),
+    img.getHeight()
+   );
+
+   const x = (img.getWidth()  - size) / 2;
+   const y = (img.getHeight() - size) / 2;
+
+   img.crop(x, y, size, size);
+
+   // ===== RESIZE TO AVATAR SIZE =====
+
+   img.resize(300, 300);
+
+   // ===== COMPRESS =====
+
+   await img
+    .quality(65)      // 60–70 ideal
+    .writeAsync(filePath);
+
+   const imgPath = "/uploads/" + req.file.filename;
+
+   // SAVE IN DB
+
+   await User.updateOne(
+    { _id: req.session.user._id },
+    { photo: imgPath }
+   );
+
+   // REFRESH SESSION
+
+   const updated = await User.findById(req.session.user._id);
+   req.session.user = updated;
+
+   res.json({ success:true });
+
+  }catch(e){
+
+   console.log("AVATAR JIMP ERROR:", e);
+   res.status(500).json({ success:false });
+
+  }
+
+});
+
+// ================= AUTH ROUTES =================
+
+app.post("/signup",async(req,res)=>{
+
+ const {username,password,firstname,lastname,birthyear,city}=req.body;
+
+ const exists = await User.findOne({username});
+ if(exists) return res.json({success:false});
+
+ await User.create({
+  username,password,firstname,lastname,birthyear,city
+ });
+
+ sendStats();
+
+ res.json({success:true});
+
+});
+
+app.post("/login",async(req,res)=>{
+
+ const user = await User.findOne({
+  username:req.body.username,
+  password:req.body.password
+ });
+
+ if(!user) return res.json({success:false});
+
+ req.session.user=user;
+
+ res.json({success:true});
+
+});
+
+app.get("/logout",(req,res)=>{
+ req.session.destroy(()=>res.redirect("/"));
+});
+
+app.get("/profile",auth,(req,res)=>{
+ res.sendFile(path.join(process.cwd(),"public/home.html"));
+});
+
+// ================= ADS =================
+
+app.post("/add-ad",
+ auth,
+ upload.array("photos",5),
+ compressImage,
+ async(req,res)=>{
 
  try{
 
-  const photoPath = "/uploads/" + req.file.filename;
+  // ⛔ LIMITS
+  const now = Date.now();
+  const threeDays = 3 * 24 * 60 * 60 * 1000;
 
-  await User.findByIdAndUpdate(
-   req.session.user.id,
-   { photo: photoPath }
-  );
+  const isBooking = String(req.body.booking) === "true";
 
-  req.session.user.photo = photoPath;
+  // 📦 лимити эълони одӣ
+  if(!isBooking){
 
-  res.redirect("/profile");
-
- }catch(err){
-
-  console.log("Avatar error:", err.message);
-  res.redirect("/profile");
-
- }
-
-});
-
-//  MOVE FILE TO PUBLIC
-
-app.post("/upload-avatar", auth, upload.single("avatar"), async (req,res)=>{
-
- if(!req.file){
-  return res.redirect("/edit-profile.html");
- }
-
- // MOVE FILE TO PUBLIC
- const photoPath = "/uploads/" + req.file.filename;
-
- fs.renameSync(
-  req.file.path,
-  path.join("public", photoPath)
- );
-
- // UPDATE MONGO USER
- await User.findByIdAndUpdate(
-  req.session.user._id,
-  { photo: photoPath }
- );
-
- // UPDATE SESSION
- req.session.user.photo = photoPath;
-
- req.session.save(()=>{
-  res.redirect("/profile");
- });
-
-});
-
-app.get("/api/normal-ads", async (req,res)=>{
-
- const ads = await Ad.find({ booking:false })
- .sort({ time:-1 });
-
- res.json(ads);
-});
-
-app.get("/api/booking-ads", async (req,res)=>{
-
- const ads = await Ad.find({ booking:true })
- .sort({ time:-1 });
-
- res.json(ads);
-});
-
-// GET BOOKINGS ONLY
-app.get("/api/bookings", auth, async (req,res)=>{
-
- const bookings = await Booking.find();
-
- const enriched = await enrichBookingsMongo(bookings);
-
- res.json(enriched);
-
-});
-
-app.post("/api/request-booking", auth, async (req,res)=>{
-
- const { adId, date, start, end } = req.body;
-
- const ad = await Ad.findById(adId);
-
- if(!ad){
-  return res.json({success:false,message:"Эълон ёфт нашуд"});
- }
-
- // ⛔ check busy time
- const reqStart = timeToMinutes(start);
- const reqEnd = timeToMinutes(end);
-
- const busy = await Booking.findOne({
-  adId,
-  date,
-  status:"confirmed"
- });
-
- if(busy){
-  const s = timeToMinutes(busy.start);
-  const e = timeToMinutes(busy.end);
-
-  if(reqStart < e && reqEnd > s){
-   return res.json({
-    success:false,
-    message:"Ин вақт аллакай банд аст"
+   const adsCount = await Ad.countDocuments({
+    userId: String(req.session.user._id),
+    booking:false,
+    time: { $gt: now - threeDays }
    });
-  }
- }
 
- const promo = "PB-" + Math.random().toString(36).substring(2,8).toUpperCase();
+   if(adsCount >= 3){
+    return res.json({
+     success:false,
+     message:"Шумо танҳо 3 эълон дар 3 рӯз гузошта метавонед"
+    });
+   }
 
- const expireAt = Date.now() + 30 * 60 * 1000;
-
- const booking = new Booking({
-
-  renterId: req.session.user._id,
-  ownerId: ad.userId,
-
-  adId,
-  date,
-  start,
-  end,
-
-  promo,
-  status:"pending",
-
-  created: Date.now(),
-  expireAt
-
- });
-
- await booking.save();
-
- res.json({
-  success:true,
-  promo,
-  expireAt
- });
-
-});
-setInterval(async ()=>{
-
- const now = Date.now();
-
- // expire pending
- await Booking.updateMany(
-  { status:"pending", expireAt:{ $lt: now } },
-  { $set:{ status:"expired" } }
- );
-
- // finish confirmed
- const confirmed = await Booking.find({ status:"confirmed" });
-
- for(const b of confirmed){
-
-  const endTime = new Date(b.date+" "+b.end).getTime();
-
-  if(now > endTime){
-   b.finished = true;
-   await b.save();
   }
 
- }
+  // 📅 лимити эълони брон
+  if(isBooking){
 
-},60000);
-app.get("/api/my-booking-requests", auth, async (req,res)=>{
+   const bookingAdsCount = await Ad.countDocuments({
+    userId: String(req.session.user._id),
+    booking:true,
+    time: { $gt: now - threeDays }
+   });
 
- const uid = req.session.user._id;
+   if(bookingAdsCount >= 2){
+    return res.json({
+     success:false,
+     message:"Шумо танҳо 2 эълони брон дар 3 рӯз гузошта метавонед"
+    });
+   }
 
- const bookings = await Booking.find({
-  status:"pending",
-  $or:[
-   { ownerId: uid },
-   { renterId: uid }
-  ]
- });
+  }
 
- const result = await enrichBookingsMongo(bookings);
+  // 🖼 ИН ҶО МУҲИМ — суратҳоро мегирем
+  const images = req.files?.map(f=>"/uploads/"+f.filename) || [];
 
- res.json(result);
+  // 1️⃣ CREATE AD
+  await Ad.create({
 
-});
-app.get("/api/my-active-bookings", auth, async (req,res)=>{
+   title:req.body.title,
+   price:Number(req.body.price) || 0,
+   phone:req.body.phone,
+   whatsapp:req.body.whatsapp,
+   desc:req.body.desc,
 
- const uid = req.session.user._id;
+   category:req.body.category,
+   sub:req.body.sub,
+   city:req.body.city,
 
- const bookings = await Booking.find({
-  status:"confirmed",
-  finished: { $ne:true },
-  $or:[
-   { ownerId: uid },
-   { renterId: uid }
-  ]
- });
+   photos: images,   // 👈 ҳоло дуруст
 
- const result = await enrichBookingsMongo(bookings);
+   userId:String(req.session.user._id),
 
- res.json(result);
+   booking:isBooking,
 
-});
-app.post("/api/confirm-booking", auth, async (req,res)=>{
+   time:Date.now(),
+   expireAt:Date.now()+Number(req.body.duration||7)*86400000
 
- const promo = req.body.promo?.trim().toUpperCase();
-
- if(!promo){
-  return res.json({success:false,message:"Код ворид нашуд"});
- }
-
- const booking = await Booking.findOne({ promo });
-
- if(!booking){
-  return res.json({success:false,message:"Код нодуруст"});
- }
-
- if(booking.ownerId != req.session.user._id){
-  return res.json({success:false,message:"⛔ Access denied"});
- }
-
- if(booking.status !== "pending"){
-  return res.json({success:false,message:"Already used"});
- }
-
- booking.status = "confirmed";
- booking.confirmedAt = Date.now();
-
- await booking.save();
-
- res.json({success:true});
-
-});
-
-app.get("/api/my-booking-history", auth, async (req,res)=>{
-
- const uid = req.session.user._id;
-
- const bookings = await Booking.find({
-  $or:[
-   { ownerId: uid },
-   { renterId: uid }
-  ],
-  $or:[
-   { status:"expired" },
-   { status:"rejected" },
-   { finished:true }
-  ]
- });
-
- const result = await enrichBookingsMongo(bookings);
-
- res.json(result);
-
-});
-
-
-app.post("/api/add-view",(req,res)=>{
-
- const { adId } = req.body;
-
- let ads = readAds();
-
- const index = ads.findIndex(a=>a.id==adId);
-
- if(index === -1){
-  return res.json({success:false});
- }
-
- ads[index].views = (ads[index].views || 0) + 1;
-
- writeAds(ads);
- l
-});
-
-app.post("/api/like", auth, async (req,res)=>{
-
- const uid = req.session.user._id;
- const { adId } = req.body;
-
- const ad = await Ad.findById(adId);
-
- if(!ad){
-  return res.json({ success:false });
- }
-
- if(!ad.likedBy){
-  ad.likedBy = [];
- }
-
- const pos = ad.likedBy.indexOf(uid.toString());
-
- // ✅ UNLIKE
- if(pos !== -1){
-
-  ad.likedBy.splice(pos,1);
-  ad.likes = ad.likedBy.length;
-
-  await ad.save();
-
-  return res.json({
-   success:true,
-   liked:false,
-   likes: ad.likes
   });
- }
 
- // ✅ LIKE
- ad.likedBy.push(uid);
- ad.likes = ad.likedBy.length;
+  res.json({ success:true });
 
- await ad.save();
+ }catch(e){
 
- res.json({
-  success:true,
-  liked:true,
-  likes: ad.likes
- });
-
-});
- res.json({success:true});
-
-});
-
-
-app.get("/api/user/:id", async (req,res)=>{
- try{
-
-  const uid = req.params.id;
-
-  const user = await User.findById(uid).lean();
-
-  if(!user){
-   return res.json(null);
-  }
-
-  const userAds = await Ad.find({ userId: uid })
-                          .sort({ time:-1 })
-                          .lean();
+  console.log("ADD AD ERROR:", e);
 
   res.json({
-   id: user._id,
-   username: user.username || user.name,
-   city: user.city || "",
-   photo: user.photo || "/avatar.png",
-   createdAt: user.createdAt,
-   adsCount: userAds.length,
-   ads: userAds
+   success:false,
+   message:"Хато дар сервер"
   });
 
- }
- catch(err){
-  console.log("User API error:", err.message);
-  res.json(null);
  }
 
 });
 
-// ================= AUTO PING (ANTI SLEEP) =================
+app.get("/api/ads", async(req,res)=>{
 
-const https = require("https");
+ const ads = await Ad.find({
+  booking:false
+ }).sort({ time:-1 });
 
-const SELF_URL = "https://alon-qxlw.onrender.com";
+ res.json(ads);
 
-setInterval(() => {
-  https.get(SELF_URL, (res) => {
-    console.log("Auto ping:", res.statusCode);
-  }).on("error", (err) => {
-    console.log("Ping error:", err.message);
-  });
-}, 5 * 60 * 1000); // every 5 minutes
+});
 
-setInterval(async () => {
+app.get("/api/ad/:id", async (req, res) => {
 
  try{
 
-  const now = Date.now();
+  const id = req.params.id;
 
-  const expired = await Ad.find({
-   expireAt: { $lte: now }
-  });
+  if(!mongoose.Types.ObjectId.isValid(id)){
+   return res.status(400).json({ error:"Invalid ID" });
+  }
 
-  if(!expired.length) return;
+  const ad = await Ad.findById(id).lean();
 
-  // DELETE PHOTOS
-  for(const ad of expired){
+  if(!ad){
+   return res.status(404).json({ error:"Not found" });
+  }
 
-   if(ad.photos){
+  // ✅ booking already inside ad
+  res.json(ad);
 
-    ad.photos.forEach(p => {
+ }catch(err){
 
-     const filePath = "public" + p;
+  console.log("GET AD ERROR:", err);
+  res.status(500).json({ error:"Server error" });
 
-     if(fs.existsSync(filePath)){
-      fs.unlinkSync(filePath);
-     }
+ }
 
-    });
+});
+
+app.post("/delete-ad/:id", auth, async (req, res) => {
+
+ try{
+
+  const id = req.params.id;
+
+  if(!mongoose.Types.ObjectId.isValid(id)){
+   return res.json({ success:false });
+  }
+
+  const ad = await Ad.findById(id);
+
+  if(!ad) return res.json({ success:false });
+
+  if(String(ad.userId) !== String(req.session.user._id)){
+   return res.json({ success:false });
+  }
+
+  // 🗑 УДАЛИТ СУРАТҲО АЗ ДИСК
+  if(ad.photos && ad.photos.length){
+
+   for(const img of ad.photos){
+
+    const filePath = path.join(__dirname, "public", img);
+
+    if(fs.existsSync(filePath)){
+     fs.unlinkSync(filePath);
+     console.log("🗑 Image deleted:", filePath);
+    }
 
    }
 
   }
 
-  // DELETE FROM DB
-  const result = await Ad.deleteMany({
-   expireAt: { $lte: now }
-  });
+  // 🗑 УДАЛИТ АЗ БАЗА
+  await Ad.deleteOne({ _id:id });
 
-  console.log("🧹 Expired ads removed:", result.deletedCount);
-
- }
- catch(err){
-  console.log("Expire error:", err.message);
- }
-
-}, 60000);
-
-app.get("/api/me", async (req,res)=>{
-
- if(!req.session.user){
-  return res.json({ logged:false });
- }
-
- try{
-
-  const user = await User.findById(req.session.user._id)
-                         .select("-password")
-                         .lean();
-
-  if(!user){
-   return res.json({ logged:false });
-  }
-
-  res.json({
-   logged:true,
-   user
-  });
-
- }
- catch(err){
-  console.log("ME error:", err.message);
-  res.json({ logged:false });
- }
-
-});
-
-app.post("/api/vip/create", auth, async (req,res)=>{
-
- try{
-
-  const { adId, plan } = req.body;
-
-  const ad = await Ad.findOne({ id: Number(adId) });
-
-  if(!ad){
-   return res.json({
-    success:false,
-    message:"Эълон ёфт нашуд"
-   });
-  }
-
-  // ONLY OWNER
-  if(ad.userId !== req.session.user.id){
-   return res.json({
-    success:false,
-    message:"Иҷозат нест"
-   });
-  }
-
-  let days = 0;
-  let price = 0;
-
-  if(plan === "1"){
-   days = 3;
-   price = 10;
-  }
-  else if(plan === "2"){
-   days = 10;
-   price = 30;
-  }
-  else if(plan === "3"){
-   days = 30;
-   price = 60;
-  }
-  else{
-   return res.json({
-    success:false,
-    message:"Пакет нодуруст"
-   });
-  }
-
-  // ⚠️ payment redirect (test mode)
-  res.json({
-   success:true,
-   payUrl: `/vip-success.html?id=${adId}&days=${days}&price=${price}`
-  });
-
- }
- catch(err){
-
-  console.log("VIP create error:", err.message);
-
-  res.json({
-   success:false,
-   message:"Server error"
-  });
-
- }
-
-});
-
-app.post("/api/vip/confirm", auth, async (req,res)=>{
-
- try{
-
-  const { adId, days } = req.body;
-
-  const ad = await Ad.findOne({ id: Number(adId) });
-
-  if(!ad){
-   return res.json({ success:false });
-  }
-
-  // ONLY OWNER
-  if(ad.userId !== req.session.user.id){
-   return res.json({ success:false });
-  }
-
-  ad.vip = true;
-  ad.vipUntil = Date.now() + (Number(days) * 24 * 60 * 60 * 1000);
-
-  await ad.save();
+  // 🗑 УДАЛИТ БРОНҲОИ МАРБУТ
+  await Booking.deleteMany({ adId: id });
 
   res.json({ success:true });
 
- }
- catch(err){
+ }catch(e){
 
-  console.log("VIP confirm error:", err.message);
-
-  res.json({
-   success:false,
-   message:"Server error"
-  });
+  console.log("DELETE ERROR:", e);
+  res.json({ success:false });
 
  }
 
 });
 
-app.get("/api/messages/:room", auth, async (req,res)=>{
+// ================= LIKE =================
+
+app.post("/api/like",auth,async(req,res)=>{
+
+ const uid = String(req.session.user._id);
+ const ad = await Ad.findById(req.body.adId);
+
+ if(!ad) return res.json({success:false});
+
+ const pos = ad.likedBy.indexOf(uid);
+
+ if(pos !== -1){
+  ad.likedBy.splice(pos,1);
+ }else{
+  ad.likedBy.push(uid);
+ }
+
+ ad.likes = ad.likedBy.length;
+
+ await ad.save();
+
+ res.json({
+ success:true,
+ liked: pos === -1,
+ likes: ad.likes
+});
+
+});
+
+// ================= VIEW =================
+
+app.post("/api/add-view", async (req,res)=>{
 
  try{
 
-  const room = req.params.room;
+  const ip =
+   req.headers["x-forwarded-for"] ||
+   req.socket.remoteAddress;
 
-  const list = await Message
-   .find({ room })
-   .sort({ time: 1 });
+  const ad = await Ad.findById(req.body.adId);
+
+  if(!ad) return res.json({success:false});
+
+  // ❌ Already viewed
+  if(ad.viewedBy.includes(ip)){
+   return res.json({success:true, counted:false});
+  }
+
+  // ✅ New view
+  ad.viewedBy.push(ip);
+  ad.views++;
+
+  await ad.save();
+
+  res.json({success:true, counted:true});
+
+ }catch(e){
+
+  console.log("VIEW ERROR:",e);
+  res.json({success:false});
+
+ }
+
+});
+
+// ================= BOOKINGS =================
+
+app.get("/api/bookings", async (req,res)=>{
+
+ try{
+
+  const list = await Ad.find({
+   booking: true
+  }).sort({ time:-1 });
+
 
   res.json(list);
 
- }
- catch(err){
+ }catch(e){
 
-  console.log("Get messages error:", err.message);
-
+  console.log("BOOKING API ERROR:", e);
   res.json([]);
 
  }
 
 });
 
-/* ===== START SERVER ===== */
+app.get("/api/my-booking-requests", auth, async (req,res)=>{
 
-server.listen(PORT, () => {
- console.log(`Server running on http://localhost:${PORT}`);
+ const uid = String(req.session.user._id);
+
+ const list = await Booking.find({
+  ownerId: uid,
+  status: "pending"
+ })
+ .populate("renterId","name")
+ .populate("adId","title")
+ .sort({ created:-1 });
+
+ res.json(list);
+
+});
+
+app.get("/api/my-sent-bookings", auth, async (req,res)=>{
+
+ const uid = String(req.session.user._id);
+
+ const list = await Booking.find({
+  renterId: uid
+ })
+ .populate("ownerId","name")
+ .populate("adId","title")
+ .sort({ created:-1 });
+
+ res.json(list);
+
+});
+
+app.get("/api/my-active-bookings", auth, async (req,res)=>{
+
+ const uid = String(req.session.user._id);
+
+ const list = await Booking.find({
+  $or:[
+   { renterId: uid },
+   { ownerId: uid }
+  ],
+  status:"confirmed"
+ })
+ .populate("renterId","name")
+ .populate("adId","title")
+ .lean();
+
+ const now = new Date();
+
+ // 🧠 танҳо бронҳои оянда
+ const active = list.filter(b=>{
+  const endTime = new Date(b.date + " " + b.end);
+  return endTime > now;
+ });
+
+ // 🧠 SORT BY DATE + TIME
+ active.sort((a,b)=>{
+  const aTime = new Date(a.date + " " + a.start);
+  const bTime = new Date(b.date + " " + b.start);
+  return aTime - bTime;
+ });
+
+ res.json(active);
+
+});
+
+app.get("/api/my-booking-history", auth, async (req,res)=>{
+
+ const uid = String(req.session.user._id);
+
+ const list = await Booking.find({
+  $or:[
+   { renterId: uid },
+   { ownerId: uid }
+  ],
+  status:{ $in:["rejected","expired"] }
+ })
+ .populate("renterId","name")
+ .populate("adId","title")
+ .sort({ created:-1 });
+
+ res.json(list);
+
+});
+
+app.get("/booking-action", auth, async (req,res)=>{
+
+ const { id, action } = req.query;
+
+ const book = await Booking.findById(id);
+ if(!book) return res.json({success:false});
+
+ if(String(book.ownerId) !== String(req.session.user._id)){
+  return res.json({success:false});
+ }
+
+ if(action==="accept"){
+  book.status="confirmed";
+  book.confirmedAt=Date.now();
+ }
+
+ if(action==="reject"){
+  book.status="rejected";
+  book.rejectedAt=Date.now();
+ }
+
+ await book.save();
+
+ res.json({success:true});
+
+});
+
+setInterval(async()=>{
+
+ const now = Date.now();
+
+ await Booking.updateMany(
+  {
+   status:"pending",
+   expireAt:{ $lt: now }
+  },
+  {
+   status:"expired"
+  }
+ );
+
+}, 60000);
+
+app.post("/api/request-booking", auth, async (req,res)=>{
+
+ try{
+
+
+  const uid = req.session.user._id;
+
+  const { adId, date, start, end } = req.body;
+
+  if(!adId || !date || !start || !end){
+   return res.json({ success:false, message:"Missing fields" });
+  }
+
+  const ad = await Ad.findById(adId);
+
+  if(!ad || !ad.booking){
+   return res.json({ success:false, message:"Booking disabled" });
+  }
+
+  // ⛔ CHECK TIME OVERLAP (REAL CONFLICT)
+   const conflict = await Booking.findOne({
+ adId: ad._id,
+ date: date,
+ status:"confirmed",   // ⬅ фақат тасдиқшуда вақтро мебандад
+ $or:[
+  {
+   start: { $lt: end },
+   end:   { $gt: start }
+  }
+ ]
+});
+
+  if(conflict){
+   return res.json({
+    success:false,
+    message:"Ин вақт аллакай банд аст"
+   });
+  }
+
+  // 🎟 PROMO CODE
+  const promo =
+   Math.random().toString(36).substring(2,8).toUpperCase();
+
+  const expire = Date.now() + 15 * 60 * 1000;
+
+  await Booking.create({
+
+   adId: ad._id,
+   renterId: uid,
+   ownerId: ad.userId,
+
+   date,
+   start,
+   end,
+
+   promo,
+   expireAt: expire
+
+  });
+
+  res.json({
+   success:true,
+   promo,
+   expireAt: expire
+  });
+
+ }catch(e){
+
+  console.log("BOOKING CREATE ERROR:", e);
+  res.json({ success:false });
+
+ }
+
+});
+
+app.post("/api/confirm-booking", auth, async (req,res)=>{
+
+ try{
+
+  const uid = String(req.session.user._id);
+  const { code, action } = req.body;
+
+  const booking = await Booking.findOne({ promo: code });
+
+  if(!booking){
+   return res.json({ success:false });
+  }
+
+  if(booking.status !== "pending"){
+   return res.json({ success:false });
+  }
+
+  // owner only
+  if(String(booking.ownerId) !== uid){
+   return res.json({ success:false });
+  }
+
+  // ⏱ агар муҳлат гузашта бошад → expired + history countdown
+  if(booking.expireAt < Date.now()){
+   booking.status = "expired";
+   booking.historyExpireAt =
+     new Date(Date.now() + 7*24*60*60*1000);
+   await booking.save();
+   return res.json({ success:false });
+  }
+
+  /* ================= CONFIRM ================= */
+
+  if(action === "ok"){
+
+   // 🔒 check overlap
+   const already = await Booking.findOne({
+    adId: booking.adId,
+    date: booking.date,
+    status: "confirmed",
+    $or:[
+     { start: { $lt: booking.end }, end: { $gt: booking.start } }
+    ]
+   });
+
+   if(already){
+    return res.json({
+     success:false,
+     message:"Ин вақт аллакай ба дигар кас дода шудааст"
+    });
+   }
+
+   // ✅ confirm ҳамин брон
+   booking.status = "confirmed";
+   booking.confirmedAt = Date.now();
+   await booking.save();
+
+   // ❌ дигар pending-ҳоро reject кун + history delete timer
+   await Booking.updateMany({
+    adId: booking.adId,
+    date: booking.date,
+    status:"pending",
+    _id:{ $ne: booking._id },
+    $or:[
+     { start: { $lt: booking.end }, end: { $gt: booking.start } }
+    ]
+   },{
+    status:"rejected",
+    historyExpireAt:
+      new Date(Date.now() + 7*24*60*60*1000)
+   });
+
+   return res.json({
+    success:true,
+    bookingId: booking._id
+   });
+  }
+
+  /* ================= REJECT ================= */
+
+  if(action === "no"){
+   booking.status = "rejected";
+
+   // ⏱ history auto delete after 7 days
+   booking.historyExpireAt =
+     new Date(Date.now() + 7*24*60*60*1000);
+  }
+
+  await booking.save();
+
+  res.json({
+   success:true,
+   bookingId: booking._id
+  });
+
+ }catch(e){
+
+  console.log("CONFIRM ERROR:",e);
+  res.json({ success:false });
+
+ }
+
+});
+
+app.get("/api/booking-by-code/:code", auth, async (req,res)=>{
+
+ try{
+
+   const booking = await Booking.findOne({
+ promo:req.params.code
+})
+  .populate("adId","title")
+  .populate("renterId","name");
+
+  if(!booking) return res.json({success:false});
+
+  res.json({
+   success:true,
+   ad: booking.adId.title,
+   renter: booking.renterId.name,
+   date: booking.date,
+   start: booking.start,
+   end: booking.end
+  });
+
+ }catch(e){
+  res.json({success:false});
+ }
+
+});
+
+// ================= CHAT =================
+
+app.get("/api/messages/:room", auth, async (req,res)=>{
+
+ const myId = String(req.session.user._id);
+
+ const room = req.params.room;
+
+ const list = await Message.find({ room });
+
+ // MARK READ
+ await Message.updateMany(
+  { room, to: myId, read:false },
+  { read:true }
+ );
+
+ res.json(list);
+
+});
+
+
+app.get("/api/my-chats", auth, async (req,res)=>{
+
+ try{
+
+  const myId = String(req.session.user._id);
+
+  const messages = await Message.aggregate([
+
+   {
+    $match:{
+     $or:[
+      { from: myId },
+      { to: myId }
+     ]
+    }
+   },
+
+   { $sort:{ time:-1 } },
+
+   {
+    $group:{
+     _id:"$room",
+
+     lastMessage:{ $first:"$text" },
+
+     time:{ $first:"$time" },
+
+     users:{ $addToSet:"$from" },
+
+     unread:{
+      $sum:{
+       $cond:[
+        {
+         $and:[
+          { $eq:["$to", myId] },
+          { $eq:["$read", false] }
+         ]
+        },
+        1,
+        0
+       ]
+      }
+     }
+
+    }
+   }
+
+  ]);
+
+  const result = [];
+
+  for(const c of messages){
+
+   // add receiver user
+   const fullUsers = [...c.users];
+
+   // find missing user
+   const msg = await Message.findOne({ room:c._id });
+
+   if(msg){
+    if(!fullUsers.includes(msg.to)) fullUsers.push(msg.to);
+    if(!fullUsers.includes(msg.from)) fullUsers.push(msg.from);
+   }
+
+   const otherId = fullUsers.find(u => u !== myId);
+
+   const user = await User.findById(otherId);
+
+   result.push({
+    room:c._id,
+    users:fullUsers,
+    lastMessage:c.lastMessage,
+    unread:c.unread,
+    otherName: user?.name || "User",
+    online: ONLINE_USERS.has(otherId)
+   });
+
+  }
+
+  res.json(result);
+
+ }catch(e){
+
+  console.log("MY CHATS ERROR:",e);
+  res.json([]);
+
+ }
+
+});
+
+// ================= SOCKET =================
+
+ io.on("connection", socket => {
+
+ socket.on("joinRoom", room=>{
+  socket.join(room);
+ });
+
+ socket.on("sendMessage", async data => {
+
+  const msg = await Message.create({
+   room:data.room,
+   from:data.from,
+   to:data.to,
+   text:data.text,
+   time:Date.now()
+  });
+
+  io.to(data.room).emit("newMessage", msg);
+
+ });
+
+});
+
+// ================= API ME =================
+
+app.get("/api/me",(req,res)=>{
+
+ if(req.session.user){
+  res.json({logged:true,user:req.session.user});
+ }else{
+  res.json({logged:false});
+ }
+
+});
+
+app.get("/api/my-ads", auth, async (req, res) => {
+
+ const ads = await Ad.find({
+  userId: String(req.session.user._id)
+ }).sort({ time: -1 });
+
+ res.json(ads);
+
+});
+
+app.get("/", (req,res)=>{
+ res.sendFile(path.join(__dirname,"public/index.html"));
+});
+
+app.get("/api/user/:id", async (req,res)=>{
+
+ try{
+
+  const id = req.params.id;
+
+  if(!mongoose.Types.ObjectId.isValid(id)){
+   return res.json({success:false});
+  }
+
+  const user = await User.findById(id).lean();
+  if(!user) return res.json({success:false});
+
+  const ads = await Ad.find({ userId:String(id) })
+   .sort({ time:-1 })
+   .lean();
+
+  res.json({
+   success:true,
+   user:{
+   name:user.name,
+   city:user.city,
+   photo:user.photo
+   },
+   ads: ads,
+   adsCount: ads.length
+  });
+
+ }catch(e){
+
+  console.log("USER API ERROR:",e);
+  res.json({success:false});
+
+ }
+
+});
+
+// ================= AUTO DELETE EXPIRED ADS + PHOTOS =================
+
+setInterval(async () => {
+
+ try {
+
+  const now = Date.now();
+
+  // 1️⃣ Find expired ads
+  const expiredAds = await Ad.find({
+   expireAt: { $lt: now }
+  });
+
+  if(expiredAds.length === 0) return;
+
+  console.log("🕒 Expired ads found:", expiredAds.length);
+
+  // 2️⃣ Delete photos
+  for(const ad of expiredAds){
+
+   if(ad.photos && ad.photos.length){
+
+    for(const img of ad.photos){
+
+     const filePath = path.join(__dirname, "public", img);
+
+     fs.unlink(filePath, err => {
+
+      if(err){
+       console.log("❌ Image delete error:", filePath);
+      }else{
+       console.log("🗑 Image deleted:", filePath);
+      }
+
+     });
+
+    }
+
+   }
+
+  }
+
+  // 3️⃣ Delete ads from DB
+  const result = await Ad.deleteMany({
+   expireAt: { $lt: now }
+  });
+
+  console.log("🗑 Ads deleted:", result.deletedCount);
+
+ } catch (e) {
+
+  console.log("AUTO DELETE ERROR:", e);
+
+ }
+
+}, 10 * 60 * 1000); // ҳар 10 дақиқа
+
+// 🔥 KEEP RENDER ALIVE
+setInterval(()=>{
+ fetch("https://alon.tj").catch(()=>{});
+}, 240000); // ҳар 4 дақиқа
+
+// ================= AUTO DELETE ORPHAN IMAGES (24h) =================
+
+setInterval(async ()=>{
+
+ try{
+
+  const uploadsPath = path.join(__dirname,"public/uploads");
+
+  if(!fs.existsSync(uploadsPath)) return;
+
+  // 1️⃣ ҳамаи файлҳо дар uploads
+  const files = fs.readdirSync(uploadsPath);
+
+  if(!files.length) return;
+
+  // 2️⃣ ҳамаи суратҳое ки дар Mongo истифода мешаванд
+  const ads = await Ad.find({}, "photos").lean();
+
+  const usedImages = new Set();
+
+  ads.forEach(ad=>{
+   if(ad.photos && ad.photos.length){
+    ad.photos.forEach(p=>{
+     usedImages.add(path.basename(p));
+    });
+   }
+  });
+
+  // 3️⃣ санҷиш ва delete
+  for(const file of files){
+
+   if(!usedImages.has(file)){
+
+    const fullPath = path.join(uploadsPath,file);
+
+    fs.unlink(fullPath, err=>{
+     if(err){
+      console.log("❌ Orphan delete error:", file);
+     }else{
+      console.log("🗑 Orphan image deleted:", file);
+     }
+    });
+
+   }
+
+  }
+
+ }catch(e){
+  console.log("ORPHAN CLEAN ERROR:",e);
+ }
+
+}, 24 * 60 * 60 * 1000); // ҳар 24 соат
+
+// ================= USER STATS ONLY =================
+
+app.get("/api/stats", async (req, res) => {
+ try {
+  const users = await User.countDocuments();
+
+  res.json({
+   users
+  });
+
+ } catch (e) {
+  console.log("STATS API ERROR:", e);
+  res.status(500).json({ error: true });
+ }
+});
+
+// ================= START =================
+
+server.listen(PORT,()=>{
+ console.log("🚀 Server running http://localhost:"+PORT);
 });

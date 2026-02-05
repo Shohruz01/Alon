@@ -300,6 +300,20 @@ img{
  border-radius:14px;
 }
 
+.backBtn{
+ position:fixed;
+ top:10px;
+ left:10px;
+ z-index:999;
+ background:#2563eb;
+ color:white;
+ border:none;
+ padding:8px 12px;
+ border-radius:10px;
+ font-weight:700;
+ box-shadow:0 4px 10px rgba(0,0,0,.2);
+}
+
 </style>
 </head>
 <body>
@@ -345,7 +359,7 @@ img{
 
  </div>
 </div>
-
+<button onclick="goBack()" class="backBtn">← Назад</button>
 <div class="header">📅 Тафсилоти брон</div>
 
 <div class="card" id="box">
@@ -372,26 +386,21 @@ fetch("/api/ad/" + id)
  return r.json();
 })
 .then(d=>{
-console.log("DATA =", d);
-
- if(d.message === "Аввал ба аккаунт ворид шавед"){
-  location.href="/login.html";
-  return;
- }
+ console.log("DATA =", d);
 
  const ad = d;
 
-const modal = document.getElementById("imgModal");
-const modalImg = document.getElementById("modalImg");
+ const modal = document.getElementById("imgModal");
+ const modalImg = document.getElementById("modalImg");
 
-// OWNER CHECK
-checkAdOwner(ad.userId);
+ // OWNER CHECK
+ checkAdOwner(ad.userId);
 
-// PHONE LOGIN CHECK
-checkLoginAndPhone(ad.whatsapp || ad.phone);
+ // PHONE LOGIN CHECK
+ checkLoginAndPhone(ad.whatsapp || ad.phone);
 
-window.CURRENT_CATEGORY = ad.category;
-window.CURRENT_PHONE = ad.whatsapp || ad.phone;
+ window.CURRENT_CATEGORY = ad.category;
+ window.CURRENT_PHONE = ad.whatsapp || ad.phone;
 
  document.getElementById("box").innerHTML = `
 
@@ -468,7 +477,7 @@ slider.innerHTML="";
 (ad.photos || []).forEach(src=>{
 
  const img = document.createElement("img");
- img.src = src;
+ img.src = src.startsWith("/") ? src : "/" + src;
 
  img.onclick = ()=>{
   modal.style.display="flex";
@@ -512,16 +521,24 @@ function createBooking(){
  fetch("/api/request-booking",{
   method:"POST",
   headers:{ "Content-Type":"application/json" },
+  credentials:"include",
   body:JSON.stringify({
-   adId: id,
-   date: dateInput,
+   adId:id,
+   date:dateInput,
    start,
-   end,
-   category: CURRENT_CATEGORY
+   end
   })
- })
- .then(r=>r.json())
- .then(d=>{
+})
+ .then(async r=>{
+
+  // 🔐 LOGIN CHECK
+  if(r.status === 401){
+   alert("Аввал ба аккаунт ворид шавед");
+   location.href = "/login.html";
+   return;
+  }
+
+  const d = await r.json();
 
   if(!d.success){
    alert(d.message || "Хато шуд");
@@ -531,6 +548,10 @@ function createBooking(){
 
   showPromo(d.promo, d.expireAt);
 
+ })
+ .catch(()=>{
+  alert("Хато шуд");
+  btn.disabled = false;
  });
 
 }
@@ -744,7 +765,7 @@ function startTimer(){
 
  const interval = setInterval(()=>{
 
-const expire = Number(localStorage.getItem("promoExpire_"+AD_ID));
+ const expire = parseInt(localStorage.getItem("promoExpire_"+AD_ID));
 
   if(!expire){
    clearInterval(interval);
@@ -817,7 +838,7 @@ async function checkAdOwner(ownerId){
  if(!me.logged) return;
 
  // ONLY OWNER SEE DELETE BUTTON
- if(me.user.id == ownerId){
+ if(me.user._id === ownerId){
 
   document.getElementById("deleteAdBtn").style.display = "block";
 
@@ -834,7 +855,12 @@ async function deleteAd(){
   credentials:"include"
  });
 
- const d = await r.json();
+ if(!r.ok){
+ alert("Server error");
+ return;
+}
+
+const d = await r.json();
 
  if(d.success){
 
@@ -927,7 +953,7 @@ function goLogin(){
 
 function copyBookingLink(){
 
- const url = window.location.href;
+  const url = window.location.href;
 
  if(navigator.clipboard){
 
@@ -977,9 +1003,11 @@ function sendWhatsapp(){
   code +
   "\n\nЛутфан тасдиқ кунед ✅";
 
- const url =
-  "https://wa.me/?text=" +
-  encodeURIComponent(text);
+  const phone = window.CURRENT_PHONE.replace(/\D/g,"");
+
+  const url =
+ "https://wa.me/" + phone + "?text=" +
+ encodeURIComponent(text);
 
  window.open(url, "_blank");
 
@@ -993,6 +1021,14 @@ document.getElementById("imgModal").onclick = (e)=>{
  document.getElementById("modalImg").src="";
  document.body.style.overflow="";
 };
+
+function goBack(){
+ if(document.referrer){
+  history.back();
+ }else{
+  location.href="/";
+ }
+}
 
 </script>
 

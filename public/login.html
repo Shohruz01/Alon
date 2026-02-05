@@ -22,7 +22,7 @@ body{
  background:linear-gradient(135deg,#2f80ed,#56ccf2);
 }
 
-/* ===== CARD ===== */
+/* CARD */
 
 .login-card{
  width:92%;
@@ -37,7 +37,7 @@ body{
  position:relative;
 }
 
-/* ===== LANG SWITCH ===== */
+/* LANG */
 
 .lang{
  position:absolute;
@@ -75,7 +75,7 @@ h2{
  letter-spacing:.5px;
 }
 
-/* GOOGLE BUTTON */
+/* GOOGLE BTN */
 
 #googleLogin{
  width:100%;
@@ -85,26 +85,18 @@ h2{
  font-size:16px;
  font-weight:700;
  cursor:pointer;
-
  display:flex;
  align-items:center;
  justify-content:center;
  gap:10px;
-
  background:white;
  color:#333;
-
  box-shadow:0 6px 12px rgba(0,0,0,.2);
  transition:.2s;
 }
 
-#googleLogin:hover{
- transform:scale(1.03);
-}
-
-#googleLogin:active{
- transform:scale(.97);
-}
+#googleLogin:hover{ transform:scale(1.03); }
+#googleLogin:active{ transform:scale(.97); }
 
 /* FOOT */
 
@@ -122,13 +114,12 @@ h2{
 <div class="login-card">
 
 <!-- LANGUAGE -->
-
 <div class="lang">
  <button onclick="setLang('tj')">TJ</button>
  <button onclick="setLang('ru')">RU</button>
 </div>
 
-<img src="alon.png" class="logo">
+<img src="/Alon.png" class="logo">
 
 <h2 id="title">Ворид шудан</h2>
 
@@ -143,12 +134,12 @@ h2{
 
 </div>
 
-<!-- ===== FIREBASE AUTH ===== -->
+<!-- FIREBASE + AUTH -->
 
 <script type="module" src="/firebase.js"></script>
 <script type="module" src="/auth.js"></script>
 
-<!-- ===== LANG SCRIPT ===== -->
+<!-- LANG -->
 
 <script>
 
@@ -188,4 +179,3 @@ applyLang();
 
 </body>
 </html>
-

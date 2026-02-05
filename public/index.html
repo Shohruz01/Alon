@@ -509,6 +509,26 @@ html,body{
  border-radius:14px;
 }
 
+.insta-icon{
+ position:absolute;
+ left:10px;
+ top:10px;
+ width:34px;
+ height:34px;
+ display:flex;
+ align-items:center;
+ justify-content:center;
+ background:white;
+ border-radius:10px;
+ box-shadow:0 3px 8px rgba(0,0,0,.2);
+ z-index:999;
+}
+
+.insta-icon svg{
+ width:20px;
+ height:20px;
+}
+
 </style>
 
 </head>
@@ -519,20 +539,31 @@ html,body{
 <div class="header">
 <div class="logo-box">
 
- <img src="/alon.png" class="logo-img">
+ <img src="/Alon.png" class="logo-img">
 
- <div class="stats-box">
 
-  <div id="onlineBox" class="stat online">
-   <span class="pulse"></span>
-   👤 <span id="onlineCount">0</span>
-  </div>
+<div id="userStats" style="
+ text-align:center;
+ font-weight:800;
+ padding:8px;
+">
+📊 Бор шуда истодааст...
+</div>
 
-  <div class="stat total">
-   👥 <span id="totalCount">0</span>
-  </div>
-
- </div>
+  <a href="https://instagram.com/alon._tj" target="_blank" class="insta-icon">
+<svg viewBox="0 0 24 24">
+<defs>
+<radialGradient id="instaGradient" cx="0.3" cy="1" r="1">
+<stop offset="0%" stop-color="#feda75"/>
+<stop offset="25%" stop-color="#fa7e1e"/>
+<stop offset="50%" stop-color="#d62976"/>
+<stop offset="75%" stop-color="#962fbf"/>
+<stop offset="100%" stop-color="#4f5bd5"/>
+</radialGradient>
+</defs>
+<path fill="url(#instaGradient)" d="M7.75 2h8.5A5.75 5.75 0 0122 7.75v8.5A5.75 5.75 0 0116.25 22h-8.5A5.75 5.75 0 012 16.25v-8.5A5.75 5.75 0 017.75 2zm0 2A3.75 3.75 0 004 7.75v8.5A3.75 3.75 0 007.75 20h8.5A3.75 3.75 0 0020 16.25v-8.5A3.75 3.75 0 0016.25 4h-8.5zm4.25 2.5a5.5 5.5 0 110 11 5.5 5.5 0 010-11zm0 2a3.5 3.5 0 100 7 3.5 3.5 0 000-7zm5.25-.75a1.25 1.25 0 110 2.5 1.25 1.25 0 010-2.5z"/>
+</svg>
+</a>
 
 </div>
 
@@ -741,20 +772,24 @@ html,body{
  💬
  <span data-key="chats"></span>
 
- <span id="chatCount" 
- style="
+ <span id="chatCount"
+style="
  position:absolute;
- top:-5px;
+ top:-6px;
  right:-10px;
+ min-width:18px;
+ height:18px;
  background:red;
  color:white;
- font-size:12px;
- padding:2px 6px;
+ font-size:11px;
+ font-weight:700;
  border-radius:50%;
  display:none;
- ">
- 0
- </span>
+ align-items:center;
+ justify-content:center;
+">
+0
+</span>
 
 </a>
 
@@ -797,7 +832,7 @@ function showSkeleton(){
 
 showSkeleton();
 
-fetch("/api/normal-ads")
+fetch("/api/ads")
 .then(r=>r.json())
 .then(data=>{
  ALL_ADS = data;
@@ -824,7 +859,7 @@ function renderFiltered(){
 
  // TAB FILTER
  if(CURRENT_TAB==="new"){
-  result.sort((a,b)=>b.id-a.id);
+  result.sort((a,b)=>(b.time || 0) - (a.time || 0));
  }
 
  if(CURRENT_TAB==="popular"){
@@ -837,7 +872,10 @@ function renderFiltered(){
 
  // CATEGORY
  if(currentCategory){
-  result = result.filter(a=>a.category===currentCategory);
+  result = result.filter(a =>
+ a.category?.trim().toLowerCase() ===
+ currentCategory.trim().toLowerCase()
+);
  }
 
  // CITY
@@ -901,9 +939,19 @@ function buildCard(ad){
  const card = document.createElement("div");
  card.className="ad-card";
 
- card.onclick = ()=>location="/ad.html?id="+ad.id;
+ card.onclick = ()=>{
+ if(!ad._id){
+  alert("ID нест");
+  return;
+ }
+ location="/ad.html?id="+String(ad._id);
+};
 
- const img = ad.photos?.[0] || "/noimage.png";
+ const img = ad.photos?.[0]
+ ? ad.photos[0].startsWith("http")
+   ? ad.photos[0]
+   : ad.photos[0]
+ : "/noimage.png";
 
  card.innerHTML=`
 
@@ -927,19 +975,25 @@ function formatPrice(price){
 
 function renderAd(ad){
 
+ console.log("AD ID:", ad._id);
+
  const card = document.createElement("div");
  card.className="ad-card";
 
- card.onclick = ()=>location="/ad.html?id="+ad.id;
+ card.onclick = ()=>location="/ad.html?id="+ad._id;
 
- const img = ad.photos?.[0] || "/noimage.png";
+ const img = ad.photos?.[0]
+ ? ad.photos[0].startsWith("http")
+   ? ad.photos[0]
+   : "/" + ad.photos[0].replace(/^\/+/,"")
+ : "/noimage.png";
 
  card.innerHTML=`
 
  ${ad.vip ? `<div class="vip-badge">VIP</div>` : ""}
 
- <div class="like-btn ${likes[ad.id]?"active":""}"
- onclick="event.stopPropagation();toggleLike(${ad.id},this)">
+ <div class="like-btn ${likes[ad._id]?"active":""}"
+ onclick="event.stopPropagation();toggleLike('${ad._id}',this)">
  ❤️
  </div>
 
@@ -959,9 +1013,11 @@ function renderAd(ad){
 
 function toggleLike(id,btn){
 
+ id = String(id);
+
  if(likes[id]) return;
 
- likes[id]=1;
+ likes[id] = 1;
  btn.classList.add("active");
  if(!favs.includes(id)) favs.push(id);
 
@@ -1144,26 +1200,21 @@ function setLang(l){
 
 function applyLang(){
 
- const lang = localStorage.getItem("lang")||"tj";
+ const lang = localStorage.getItem("lang") || "tj";
 
  document.querySelectorAll("[data-key]").forEach(el=>{
-  const k=el.dataset.key;
-  if(translations[lang][k]) el.innerText=translations[lang][k];
+  const k = el.dataset.key;
+  if(translations[lang][k]) el.innerText = translations[lang][k];
  });
 
  document.querySelectorAll("[data-key-placeholder]").forEach(el=>{
-  const k=el.dataset.keyPlaceholder;
-  if(translations[lang][k]) el.placeholder=translations[lang][k];
+  const k = el.dataset.keyPlaceholder;
+  if(translations[lang][k]) el.placeholder = translations[lang][k];
  });
-
-document.getElementById("onlineBox").title =
- translations[lang].online_title;
 
 }
 
-
-
-applyLang();
+window.addEventListener("load", applyLang);
 
 /* ================= MOBILE APP FEEL ================= */
 
@@ -1202,10 +1253,10 @@ function goCategory(name){
 }
 
 const featuredCats = [
- "Мошин",
- "Квартира",
- "Телефон",
- "Хона"
+ "мошин",
+ "квартира",
+ "телефон",
+ "хона"
 ];
 
 function renderHomeSections(){
@@ -1220,7 +1271,7 @@ if(!document.getElementById("homeSections")) return;
  let ads = [...ALL_ADS];
 
 if(CURRENT_TAB==="new"){
- ads.sort((a,b)=>b.id-a.id);
+ads.sort((a,b)=>(b.time || 0) - (a.time || 0));
 }
 
 if(CURRENT_TAB==="popular"){
@@ -1233,7 +1284,9 @@ if(CURRENT_TAB==="top"){
 
 ads.forEach(ad=>{
 
-  if(!featuredCats.includes(ad.category)) return;
+  const cat = ad.category.trim().toLowerCase();
+
+if(!featuredCats.includes(cat)) return;
 
   if(!groups[ad.category]){
    groups[ad.category] = [];
@@ -1322,21 +1375,33 @@ socket.on("connect", ()=>{
  .then(d=>{
 
   if(d.logged){
-   socket.emit("registerUser", d.user.id);
-   console.log("📤 REGISTER SENT:", d.user.id);
+   socket.emit("registerUser", d.user._id);
+   console.log("📤 REGISTER SENT:", d.user._id);
   }
 
  });
 
 });
 
-// ✅ ONLY RECEIVE STATS
-socket.on("stats", data => {
+// ===== NEW MESSAGE BADGE =====
 
- console.log("📊 STATS:", data);
+socket.on("newMessage", msg => {
 
- document.getElementById("onlineCount").innerText = data.online;
- document.getElementById("totalCount").innerText  = data.total;
+ console.log("📩 NEW MESSAGE");
+
+ loadUnreadChats(); // мегирад unread аз server
+
+ const badge = document.getElementById("chatCount");
+
+ badge.style.display = "flex";
+
+ let count = Number(badge.innerText || 0);
+ badge.innerText = count + 1;
+
+ // vibration
+ if(navigator.vibrate){
+  navigator.vibrate(150);
+ }
 
 });
 
@@ -1375,6 +1440,54 @@ onAuthStateChanged(auth,(user)=>{
 
 });
 
+function loadUnreadChats(){
+
+ fetch("/api/my-chats",{ credentials:"include" })
+ .then(r=>r.json())
+ .then(list=>{
+
+  let total = 0;
+
+  list.forEach(c=>{
+   total += (c.unread || 0);
+  });
+
+  const badge = document.getElementById("chatCount");
+
+  if(total > 0){
+   badge.style.display = "inline-block";
+   badge.innerText = total;
+  }else{
+   badge.style.display = "none";
+  }
+
+ })
+ .catch(err=>{
+  console.log("Unread error",err);
+ });
+
+}
+
+// first load
+loadUnreadChats();
+
+// refresh every 5 sec
+setInterval(loadUnreadChats, 5000);
+
+</script>
+
+<script>
+
+fetch("/api/stats")
+ .then(r=>r.json())
+ .then(d=>{
+  document.getElementById("userStats").innerText =
+ `👥 Люди: ${d.users}`;
+ })
+ .catch(()=>{
+  document.getElementById("userStats").innerText =
+   "❌ Хато дар гирифтани статистика";
+ });
 
 </script>
 

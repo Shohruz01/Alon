@@ -1,0 +1,22 @@
+<button onclick="login()">LOGIN</button>
+
+<script>
+function login(){
+
+ fetch("/firebase-login",{
+  method:"POST",
+  headers:{
+   "Content-Type":"application/json"
+  },
+  credentials:"include",
+  body:JSON.stringify({
+   uid:"test123",
+   name:"Test User"
+  })
+ })
+ .then(r=>r.json())
+ .then(d=>{
+  alert(JSON.stringify(d));
+ });
+}
+</script>

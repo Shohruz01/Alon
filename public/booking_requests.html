@@ -3,9 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Дархостҳои брон</title>
+
+<title>Booking Requests</title>
 
 <style>
+
 body{
  font-family:system-ui;
  background:#f2f4f8;
@@ -13,88 +15,260 @@ body{
  padding:12px;
 }
 
+.header{
+ display:flex;
+ justify-content:space-between;
+ align-items:center;
+ margin-bottom:10px;
+}
+
 h2{
- text-align:center;
+ margin:0;
+}
+
+.lang button{
+ border:none;
+ padding:6px 10px;
+ border-radius:8px;
+ background:#2563eb;
+ color:white;
+ font-weight:700;
+ margin-left:5px;
 }
 
 .card{
  background:white;
- padding:12px;
- border-radius:12px;
+ padding:14px;
+ border-radius:14px;
  margin-bottom:10px;
  box-shadow:0 4px 10px rgba(0,0,0,.1);
 }
 
-.btn{
- padding:6px 12px;
- border:none;
- border-radius:6px;
- margin-top:8px;
+.name{
+ font-weight:800;
 }
 
-.accept{background:#2ecc71;color:white}
-.reject{background:#e74c3c;color:white}
+.time{
+ font-size:14px;
+ margin-top:4px;
+}
+
+.actions{
+ display:flex;
+ gap:8px;
+ margin-top:10px;
+}
+
+.btn{
+ flex:1;
+ padding:10px;
+ border:none;
+ border-radius:10px;
+ font-weight:800;
+}
+
+.accept{
+ background:#22c55e;
+ color:white;
+}
+
+.reject{
+ background:#ef4444;
+ color:white;
+}
+
+.empty{
+ text-align:center;
+ padding:20px;
+ opacity:.7;
+}
+
+.req{
+ padding:12px;
+ border-radius:12px;
+ margin-bottom:10px;
+ font-weight:700;
+}
+
+.req.in{
+ background:#e8f5e9;
+ color:#1b5e20;
+ border-left:6px solid #27ae60;
+}
+
+.req.out{
+ background:#e3f2fd;
+ color:#0d47a1;
+ border-left:6px solid #2196f3;
+}
+
+.req.pending{
+ background:#fff8e1;
+ color:#e65100;
+ border-left:6px solid #ff9800;
+}
+
+.req.rejected{
+ background:#ffebee;
+ color:#b71c1c;
+ border-left:6px solid #e53935;
+}
+
+.header{
+ display:flex;
+ align-items:center;
+ justify-content:space-between;
+ margin-bottom:10px;
+}
+
+.backBtn{
+ background:#2563eb;
+ color:white;
+ border:none;
+ padding:8px 14px;
+ border-radius:10px;
+ font-weight:700;
+ cursor:pointer;
+}
+
 </style>
 </head>
 
 <body>
 
-<h2>📩 Дархостҳои брон</h2>
 
-<div id="list">Загрузка...</div>
+<div class="header">
+
+<button class="backBtn" onclick="history.back()">
+    ← Назад
+  </button>
+
+ <h2 id="titleTxt">📩 Дархостҳои брон</h2>
+
+ <div class="lang">
+  <button onclick="setLang('tj')">TJ</button>
+  <button onclick="setLang('ru')">RU</button>
+ </div>
+
+</div>
+
+<h3>📥 Ба ман омад</h3>
+<div id="incoming"></div>
+
+<h3>📤 Ман равон кардам</h3>
+<div id="sent"></div>
 
 <script>
 
-async function loadRequests(){
+let lang = localStorage.getItem("lang") || "tj";
 
- const res = await fetch("/api/my-booking-requests");
- const data = await res.json();
+const TXT = {
+ tj:{ title:"📩 Дархостҳои брон", empty:"Дархост нест" },
+ ru:{ title:"📩 Запросы бронирования", empty:"Запросов нет" }
+};
 
- const box = document.getElementById("list");
+function setLang(l){
+ lang = l;
+ localStorage.setItem("lang",l);
+ applyLang();
+ loadIncoming();
+ loadSent();
+}
 
- if(!data.length){
-  box.innerHTML = "Дархост нест";
+function applyLang(){
+ document.getElementById("titleTxt").innerText = TXT[lang].title;
+}
+
+applyLang();
+
+/* ================= INCOMING (pending only) ================= */
+
+async function loadIncoming(){
+
+ const res = await fetch("/api/my-booking-requests",{ credentials:"include" });
+ const list = await res.json();
+
+ const box = document.getElementById("incoming");
+ if(!box) return;
+
+ box.innerHTML="";
+
+ const pending = list.filter(b => b.status === "pending");
+
+ if(!pending.length){
+  box.innerHTML = `<div class="empty">Дархост нест</div>`;
   return;
  }
 
- box.innerHTML = "";
-
- data.forEach(b=>{
-
+ pending.forEach(b=>{
   box.innerHTML += `
-   <div class="card">
-    👤 ${b.renterName}<br>
-    🏠 ${b.adTitle}<br>
-
-    📅 ${b.date}<br>
-    ⏰ ${b.start} - ${b.end}
-    
-    🧑 ID иҷорагир: ${b.renterId}<br>
-
-    <button class="btn accept" onclick="action(${b.id},'accept')">
-     Қабул
-    </button>
-
-    <button class="btn reject" onclick="action(${b.id},'reject')">
-     Рад
-    </button>
+   <div class="req in">
+    📥 Ворид шуд<br>
+    🏢 ${b.adId?.title || ""}<br>
+    👤 ${b.renterId?.name || "User"}<br>
+    📅 ${b.date} ⏰ ${b.start}
    </div>
   `;
-
  });
 
 }
 
-async function action(id,type){
 
- await fetch(`/booking-action?id=${id}&action=${type}`);
- loadRequests();
+/* ================= SENT (pending only) ================= */
+
+async function loadSent(){
+
+ const res = await fetch("/api/my-sent-bookings",{ credentials:"include" });
+ const list = await res.json();
+
+ const box = document.getElementById("sent");
+ if(!box) return;
+
+ box.innerHTML="";
+
+ const pending = list.filter(b => b.status === "pending");
+
+ if(!pending.length){
+  box.innerHTML = `<div class="empty">Дархост нест</div>`;
+  return;
+ }
+
+ pending.forEach(b=>{
+  box.innerHTML += `
+   <div class="req out">
+    📤 Равон шуд<br>
+    🏢 ${b.adId?.title || ""}<br>
+    Ба: ${b.ownerId?.name || "User"}<br>
+    📅 ${b.date} ⏰ ${b.start}
+   </div>
+  `;
+ });
 
 }
 
-loadRequests();
+
+/* ================= AUTO REFRESH ================= */
+
+async function autoRefresh(){
+ await loadIncoming();
+ await loadSent();
+}
+
+autoRefresh();
+
+/* ҳар 15 сония нав мешавад */
+setInterval(autoRefresh,15000);
+
+function goBack(){
+ if(document.referrer){
+  history.back();
+ }else{
+  location.href="/";
+ }
+}
 
 </script>
+
 
 </body>
 </html>

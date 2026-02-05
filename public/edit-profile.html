@@ -1,8 +1,8 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="tj">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 
 <title>Edit Profile</title>
 
@@ -14,22 +14,31 @@ body{
  font-family:system-ui;
 }
 
+/* HEADER */
+
 .header{
  background:white;
- padding:12px;
- font-weight:700;
+ padding:14px;
+ font-weight:900;
  text-align:center;
- box-shadow:0 2px 6px rgba(0,0,0,.08);
+ box-shadow:0 2px 8px rgba(0,0,0,.1);
+ position:sticky;
+ top:0;
+ z-index:10;
 }
+
+/* CARD */
 
 .card{
  background:white;
  margin:14px;
- padding:14px;
- border-radius:14px;
- box-shadow:0 4px 10px rgba(0,0,0,.08);
+ padding:16px;
+ border-radius:18px;
+ box-shadow:0 6px 16px rgba(0,0,0,.08);
  text-align:center;
 }
+
+/* AVATAR */
 
 .avatar{
  width:110px;
@@ -38,96 +47,194 @@ body{
  object-fit:cover;
  border:3px solid #2563eb;
  margin-bottom:10px;
+ background:#eee;
 }
+
+/* INPUT */
 
 input{
  width:100%;
- padding:12px;
+ padding:13px;
  margin-top:10px;
- border-radius:10px;
+ border-radius:12px;
  border:1px solid #ddd;
  font-size:15px;
+ outline:none;
 }
+
+/* BUTTON */
 
 button{
  width:100%;
  margin-top:14px;
  padding:14px;
  border:none;
- border-radius:12px;
+ border-radius:14px;
  background:#2563eb;
  color:white;
  font-size:16px;
- font-weight:700;
+ font-weight:800;
+ cursor:pointer;
 }
 
 .upload-btn{
  background:#10b981;
 }
 
+/* LANG */
+
+.lang{
+ display:flex;
+ justify-content:center;
+ gap:8px;
+ margin-bottom:10px;
+}
+
+.lang button{
+ width:auto;
+ padding:6px 14px;
+ font-size:13px;
+ border-radius:10px;
+}
+
 </style>
 </head>
 <body>
 
-<div class="header">
- ✏️ Таҳрири профиль
-</div>
+<div class="header" id="titleTxt">✏ Таҳрири профиль</div>
 
 <div class="card">
 
+<div class="lang">
+ <button onclick="setLang('tj')">TJ</button>
+ <button onclick="setLang('ru')">RU</button>
+</div>
+
 <img id="avatar" class="avatar" src="/avatar.png">
+
+<!-- AVATAR UPLOAD -->
 
 <form id="avatarForm" enctype="multipart/form-data">
 
-<input type="file" name="avatar" accept="image/*" required>
+<input type="file" name="avatar" accept="image/*">
 
-<button class="upload-btn">
- 📤 Upload avatar
+<button type="submit" class="upload-btn" id="uploadTxt">
+ 📤 Боркунии сурат
 </button>
 
 </form>
 
-<input id="username" placeholder="Username">
-<input id="city" placeholder="Шаҳр">
-<input id="birthyear" placeholder="Соли таваллуд">
+<!-- DISPLAY NAME -->
 
-<button type="button" id="saveBtn">
- 💾 Захира кардан
-</button>
+<input id="name" placeholder="Ном">
+
+<input id="city" placeholder="Шаҳр">
+
+<input id="birthyear" type="number" placeholder="Соли таваллуд">
+
+<button type="button" id="saveBtn">💾 Захира кардан</button>
 
 </div>
 
 <script>
 
-// LOAD PROFILE
+/* ================= LANGUAGE ================= */
+
+let lang = localStorage.getItem("lang") || "tj";
+
+const TXT = {
+
+ tj:{
+  title:"✏ Таҳрири профиль",
+  upload:"📤 Боркунии сурат",
+  save:"💾 Захира кардан",
+  name:"Ном",
+  city:"Шаҳр",
+  year:"Соли таваллуд",
+  updated:"✅ Профиль нав шуд",
+  error:"❌ Хато шуд",
+  login:"Аввал ба аккаунт ворид шавед"
+ },
+
+ ru:{
+  title:"✏ Редактирование профиля",
+  upload:"📤 Загрузить фото",
+  save:"💾 Сохранить",
+  name:"Имя",
+  city:"Город",
+  year:"Год рождения",
+  updated:"✅ Профиль обновлён",
+  error:"❌ Ошибка",
+  login:"Сначала войдите в аккаунт"
+ }
+
+};
+
+const titleTxt = document.getElementById("titleTxt");
+const uploadTxt = document.getElementById("uploadTxt");
+const saveBtn = document.getElementById("saveBtn");
+
+const name = document.getElementById("name");
+const city = document.getElementById("city");
+const birthyear = document.getElementById("birthyear");
+const avatar = document.getElementById("avatar");
+
+function setLang(l){
+ lang=l;
+ localStorage.setItem("lang",l);
+ applyLang();
+}
+
+function applyLang(){
+
+ titleTxt.innerText = TXT[lang].title;
+ uploadTxt.innerText = TXT[lang].upload;
+ saveBtn.innerText = TXT[lang].save;
+
+ name.placeholder = TXT[lang].name;
+ city.placeholder = TXT[lang].city;
+ birthyear.placeholder = TXT[lang].year;
+
+}
+
+applyLang();
+
+/* ================= LOAD PROFILE ================= */
+
 fetch("/api/me",{ credentials:"include" })
 .then(r=>r.json())
 .then(d=>{
 
  if(!d.logged){
+  alert(TXT[lang].login);
   location.href="/login.html";
   return;
  }
 
  const u = d.user;
 
- document.getElementById("username").value = u.username || "";
- document.getElementById("city").value = u.city || "";
- document.getElementById("birthyear").value = u.birthyear || "";
+ name.value = u.name || "";
+ city.value = u.city || "";
+ birthyear.value = u.birthyear || "";
 
  if(u.photo){
- document.getElementById("avatar").src = u.photo + "?t=" + Date.now();
+  avatar.src = u.photo + "?t=" + Date.now();
  }
 
 });
 
-// SAVE PROFILE
-document.getElementById("saveBtn").onclick = ()=>{
+/* ================= SAVE PROFILE ================= */
+
+saveBtn.onclick = ()=>{
+
+ saveBtn.disabled = true;
 
  const data = {
-  username: username.value,
-  city: city.value,
-  birthyear: birthyear.value
+
+  name: name.value.trim(),
+  city: city.value.trim(),
+  birthyear: birthyear.value.trim()
+
  };
 
  fetch("/api/update-profile",{
@@ -140,35 +247,58 @@ document.getElementById("saveBtn").onclick = ()=>{
  .then(d=>{
 
   if(d.success){
-   alert("✅ Профиль нав шуд");
+   alert(TXT[lang].updated);
    location.href="/profile";
   }else{
-   alert("❌ Хато шуд");
+   alert(TXT[lang].error);
   }
 
+ })
+ .catch(()=>{
+  alert("Server error");
+ })
+ .finally(()=>{
+  saveBtn.disabled=false;
  });
 
 };
 
-// UPLOAD AVATAR
+const avatarForm = document.getElementById("avatarForm");
 
-document.getElementById("avatarForm").onsubmit = (e)=>{
-
+avatarForm.onsubmit = async (e)=>{
  e.preventDefault();
 
- const form = new FormData(e.target);
+ uploadTxt.disabled = true;
 
- fetch("/upload-avatar",{
-  method:"POST",
-  body:form,
-  credentials:"include"
- })
- .then(()=>{
+ try{
 
-  alert("✅ Сурат upload шуд");
-  location.reload();
+  const formData = new FormData(avatarForm);
 
- });
+  const res = await fetch("/upload-avatar",{
+   method:"POST",
+   body: formData,
+   credentials:"include"
+  });
+
+  const data = await res.json();
+
+  if(data.success){
+   alert("✅ Сурат иваз шуд");
+   location.reload();
+  }else{
+   alert("❌ Upload хато");
+  }
+
+ }catch(err){
+
+  console.log(err);
+  alert("❌ Server error");
+
+ }finally{
+
+  uploadTxt.disabled = false;
+
+ }
 
 };
 

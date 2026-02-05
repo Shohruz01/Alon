@@ -3,9 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Таърихи брон</title>
+
+<title>Booking History</title>
 
 <style>
+
 body{
  font-family:system-ui;
  background:#f2f4f8;
@@ -13,60 +15,229 @@ body{
  padding:12px;
 }
 
-h2{text-align:center}
+.header{
+ display:flex;
+ justify-content:space-between;
+ align-items:center;
+ margin-bottom:10px;
+}
+
+h2{
+ margin:0;
+}
+
+.lang button{
+ border:none;
+ padding:6px 10px;
+ border-radius:8px;
+ background:#2563eb;
+ color:white;
+ font-weight:700;
+ margin-left:5px;
+}
 
 .card{
  background:#ffeaea;
- padding:12px;
- border-radius:12px;
+ padding:14px;
+ border-radius:14px;
+ margin-bottom:10px;
+ box-shadow:0 4px 10px rgba(0,0,0,.08);
+}
+
+.name{
+ font-weight:800;
+}
+
+.time{
+ font-size:14px;
+ margin-top:4px;
+}
+
+.status{
+ margin-top:6px;
+ font-weight:800;
+}
+
+.finished{ color:#16a34a }
+.expired{ color:#f59e0b }
+.rejected{ color:#ef4444 }
+
+.empty{
+ text-align:center;
+ padding:20px;
+ opacity:.7;
+}
+
+.header{
+ display:flex;
+ align-items:center;
+ justify-content:space-between;
  margin-bottom:10px;
 }
+
+.backBtn{
+ background:#2563eb;
+ color:white;
+ border:none;
+ padding:8px 14px;
+ border-radius:10px;
+ font-weight:700;
+ cursor:pointer;
+}
+
 </style>
 </head>
 
 <body>
 
-<h2>📜 Таърихи брон</h2>
 
-<div id="list">Загрузка...</div>
+<div class="header">
+
+<button class="backBtn" onclick="history.back()">
+    ← Назад
+  </button>
+
+ <h2 id="titleTxt">📜 Таърихи брон</h2>
+
+ <div class="lang">
+  <button onclick="setLang('tj')">TJ</button>
+  <button onclick="setLang('ru')">RU</button>
+ </div>
+
+</div>
+
+<div id="list">Loading...</div>
 
 <script>
 
-fetch("/api/my-booking-history")
+/* ================= LANGUAGE ================= */
+
+let lang = localStorage.getItem("lang") || "tj";
+
+const TXT = {
+
+ tj:{
+  title:"📜 Таърихи брон",
+  empty:"📭 Таърих холӣ аст",
+  user:"Иҷорагир",
+  date:"Сана",
+  time:"Вақт",
+  finished:"✅ Анҷом ёфт",
+  expired:"⌛ Мӯҳлат гузашт",
+  rejected:"❌ Рад шуд"
+ },
+
+ ru:{
+  title:"📜 История бронирований",
+  empty:"📭 История пуста",
+  user:"Арендатор",
+  date:"Дата",
+  time:"Время",
+  finished:"✅ Завершено",
+  expired:"⌛ Истекло",
+  rejected:"❌ Отклонено"
+ }
+
+};
+
+function setLang(l){
+ lang = l;
+ localStorage.setItem("lang",l);
+ applyLang();
+ render();
+}
+
+function applyLang(){
+ document.getElementById("titleTxt").innerText = TXT[lang].title;
+}
+
+applyLang();
+
+/* ================= DATA ================= */
+
+let HISTORY = [];
+
+fetch("/api/my-booking-history",{ credentials:"include" })
 .then(r=>r.json())
 .then(data=>{
 
+ // SORT CLIENT SIDE ALSO (SAFETY)
+ HISTORY = data.sort((a,b)=> b.created - a.created);
+
+ render();
+
+});
+
+function render(){
+
  const box = document.getElementById("list");
 
- if(!data.length){
-  box.innerHTML="📭 Таърих холӣ аст";
+ if(!HISTORY.length){
+  box.innerHTML = `<div class="empty">${TXT[lang].empty}</div>`;
   return;
  }
 
- box.innerHTML="";
+ box.innerHTML = "";
 
- data.forEach(b=>{
+ HISTORY.forEach(b=>{
 
- let statusText = "❌ Рад шуд";
+  let status = "";
+  let cls = "";
 
- if(b.status==="expired") statusText="⌛ Мӯҳлат гузашт";
- if(b.finished) statusText="✅ Анҷом ёфт";
+  if(b.status === "expired"){
+   status = TXT[lang].expired;
+   cls = "expired";
+  }
 
- box.innerHTML += `
-  <div class="card">
-   👤 ${b.renterName}<br>
-   🏠 ${b.adTitle}<br>
+  else if(b.status === "rejected"){
+   status = TXT[lang].rejected;
+   cls = "rejected";
+  }
 
-   📅 ${b.date}<br>
-   ⏰ ${b.start} - ${b.end}
+  else{
+   return; // дигар статусҳоро нишон надиҳ
+  }
 
-   ${statusText}
-  </div>
- `;
+  const user =
+   b.renterId
+    ? (b.renterId.name || "User")
+    : "User";
+
+  box.innerHTML += `
+
+   <div class="card">
+
+    <div class="name">
+     👤 ${TXT[lang].user}: ${user}
+    </div>
+
+    <div class="time">
+     📅 ${TXT[lang].date}: ${b.date}
+    </div>
+
+    <div class="time">
+     ⏰ ${TXT[lang].time}: ${b.start} - ${b.end}
+    </div>
+
+    <div class="status ${cls}">
+     ${status}
+    </div>
+
+   </div>
+
+  `;
 
  });
 
-});
+}
+
+function goBack(){
+ if(document.referrer){
+  history.back();
+ }else{
+  location.href="/";
+ }
+}
 
 </script>
 

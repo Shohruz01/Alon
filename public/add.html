@@ -2,8 +2,7 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Иловаи эълон</title>
 
 <style>
@@ -31,7 +30,7 @@ body{
  box-shadow:0 4px 12px rgba(0,0,0,.1);
 }
 
-input, textarea, select{
+input, textarea, select, button{
  width:100%;
  padding:12px;
  margin-top:10px;
@@ -40,34 +39,30 @@ input, textarea, select{
  font-size:15px;
 }
 
-textarea{
- resize:none;
- height:90px;
-}
+textarea{ height:90px }
 
 button{
- width:100%;
- margin-top:16px;
- padding:14px;
- border:none;
- border-radius:14px;
  background:#2f80ed;
  color:white;
- font-size:16px;
  font-weight:700;
+ border:none;
 }
 
-.form-select{
- width:100%;
- padding:12px;
- margin-top:10px;
- border-radius:12px;
- border:1px solid #ddd;
- font-size:15px;
- background:white;
- appearance:none;
- -webkit-appearance:none;
- -moz-appearance:none;
+.header{
+ display:flex;
+ align-items:center;
+ justify-content:space-between;
+ margin-bottom:10px;
+}
+
+.backBtn{
+ background:#2563eb;
+ color:white;
+ border:none;
+ padding:8px 14px;
+ border-radius:10px;
+ font-weight:700;
+ cursor:pointer;
 }
 
 </style>
@@ -75,11 +70,16 @@ button{
 
 <body>
 
+
 <div class="header">➕ Иловаи эълон</div>
+
+<button class="backBtn" onclick="history.back()">
+    ← Назад
+  </button>
 
 <div class="card">
 
-<form action="/add-ad" method="POST" enctype="multipart/form-data">
+<form id="addForm" action="/add-ad" method="POST" enctype="multipart/form-data">
 
 <!-- AUTO FIELDS -->
 <input type="hidden" name="id" id="adId">
@@ -108,7 +108,8 @@ button{
 <option value="Панҷакент">Панҷакент</option>
 <option value="Конибодом">Конибодом</option>
 <option value="Исфара">Исфара</option>
-<option value="Бӯстон">Бӯстон</option>                     <option value="Гулистон">Гулистон</option>
+<option value="Бӯстон">Бӯстон</option>                     
+<option value="Гулистон">Гулистон</option>
 <option value="Ашт">Ашт</option>
 <option value="Зафаробод">Зафаробод</option>
 <option value="Ҷаббор Расулов">Ҷаббор Расулов</option>
@@ -126,7 +127,8 @@ button{
 <option value="Ёвон">Ёвон</option>
 <option value="Фархор">Фархор</option>
 <option value="Данғара">Данғара</option>
-<option value="Левакант">Левакант</option>                 <option value="Норак">Норак</option>
+<option value="Левакант">Левакант</option>                 
+<option value="Норак">Норак</option>
 <option value="Панҷ">Панҷ</option>
 <option value="Қубодиён">Қубодиён</option>
 <option value="Ҷайҳун">Ҷайҳун</option>
@@ -145,20 +147,25 @@ button{
 <option value="Файзобод">Файзобод</option>
 <option value="Рашт">Рашт</option>
 <option value="Тоҷикобод">Тоҷикобод</option>
-<option value="Нуробод">Нуробод</option>                   <option value="Шаҳринав">Шаҳринав</option>
+<option value="Нуробод">Нуробод</option>                   
+<option value="Шаҳринав">Шаҳринав</option>
 <option value="Варзоб">Варзоб</option>
 
-<!-- ВМКБ -->                                              <option value="Хоруғ">Хоруғ</option>
-<option value="Шуғнон">Шуғнон</option>                     <option value="Рӯшон">Рӯшон</option>
-<option value="Мурғоб">Мурғоб</option>                     <option value="Ванҷ">Ванҷ</option>
-<option value="Дарвоз">Дарвоз</option>                     <option value="Ишкошим">Ишкошим</option>
+<!-- ВМКБ -->                                              
+<option value="Хоруғ">Хоруғ</option>
+<option value="Шуғнон">Шуғнон</option>                     
+<option value="Рӯшон">Рӯшон</option>
+<option value="Мурғоб">Мурғоб</option>                     
+<option value="Ванҷ">Ванҷ</option>
+<option value="Дарвоз">Дарвоз</option>                     
+<option value="Ишкошим">Ишкошим</option>
 
 </select>
 
 <select name="duration" required>
  <option value="">Мӯҳлатро интихоб кунед</option>
- <option value="3">3 рӯз</option>
- <option value="10">10 рӯз</option>
+ <option value="3">7 рӯз</option>
+ <option value="10">15 рӯз</option>
  <option value="30">30 рӯз</option>
 </select>
 
@@ -211,88 +218,305 @@ button{
 
 <input type="file" name="photos" accept="image/*" multiple required>
 
-<button type="submit">📤 Илова кардан</button>
+<button type="submit" id="submitBtn">Илова кардан</button>
 
 </form>
 
 </div>
-
-
-<script>
-
-// AUTO ID GENERATOR
-document.getElementById("adId").value = Date.now();
-
-</script>
 
 <script>
 
 const catSel = document.getElementById("catSelect");
 const subSel = document.getElementById("subSelect");
 
+/* ================= SUB CATEGORIES ================= */
+
 const SUBS = {
 
+ /* ================= REAL ESTATE ================= */
+
+ Квартира:[
+  {id:"all", tj:"Ҳама", ru:"Все"},
+  {id:"1room", tj:"1 ҳуҷра", ru:"1 комната"},
+  {id:"2room", tj:"2 ҳуҷра", ru:"2 комнаты"},
+  {id:"3room", tj:"3 ҳуҷра", ru:"3 комнаты"},
+  {id:"new", tj:"Навсохт", ru:"Новостройка"},
+  {id:"secondary", tj:"Дуюмдараҷа", ru:"Вторичка"}
+ ],
+
+ Хона:[
+  {id:"all", tj:"Ҳама", ru:"Все"},
+  {id:"yard", tj:"Ҳавлидор", ru:"Частный дом"},
+  {id:"villa", tj:"Вилла", ru:"Вилла"},
+  {id:"dacha", tj:"Дача", ru:"Дача"}
+ ],
+
+ Иҷора:[
+  {id:"all", tj:"Ҳама", ru:"Все"},
+  {id:"daily", tj:"Рӯзона", ru:"Посуточно"},
+  {id:"monthly", tj:"Моҳона", ru:"Помесячно"},
+  {id:"long", tj:"Дарозмуддат", ru:"Долгосрочно"}
+ ],
+
+ Дӯкон:[
+  {id:"all", tj:"Ҳама", ru:"Все"},
+  {id:"market", tj:"Бозор", ru:"Рынок"},
+  {id:"office", tj:"Офис", ru:"Офис"},
+  {id:"warehouse", tj:"Анбор", ru:"Склад"}
+ ],
+
+ /* ================= TRANSPORT ================= */
+
  Мошин:[
+  {id:"all", tj:"Ҳама", ru:"Все"},
   {id:"sedan", tj:"Седан", ru:"Седан"},
   {id:"suv", tj:"Ҷип", ru:"Внедорожник"},
+  {id:"hatchback", tj:"Хэтчбек", ru:"Хэтчбек"},
   {id:"electric", tj:"Электро", ru:"Электро"},
   {id:"truck", tj:"Боркаш", ru:"Грузовой"}
  ],
 
+ Мотоцикл:[
+  {id:"all", tj:"Ҳама", ru:"Все"},
+  {id:"sport", tj:"Спорт", ru:"Спорт"},
+  {id:"classic", tj:"Классик", ru:"Классика"},
+  {id:"enduro", tj:"Эндуро", ru:"Эндуро"}
+ ],
+
+ Скутер:[
+  {id:"all", tj:"Ҳама", ru:"Все"},
+  {id:"electric", tj:"Электро", ru:"Электро"},
+  {id:"petrol", tj:"Бензин", ru:"Бензин"}
+ ],
+
+ Велосипед:[
+  {id:"all", tj:"Ҳама", ru:"Все"},
+  {id:"mountain", tj:"Кӯҳӣ", ru:"Горный"},
+  {id:"city", tj:"Шаҳрӣ", ru:"Городской"},
+  {id:"kids", tj:"Кӯдакона", ru:"Детский"}
+ ],
+
+ /* ================= TECH ================= */
+
  Телефон:[
+  {id:"all", tj:"Ҳама", ru:"Все"},
   {id:"iphone", tj:"iPhone", ru:"iPhone"},
   {id:"samsung", tj:"Samsung", ru:"Samsung"},
-  {id:"xiaomi", tj:"Xiaomi", ru:"Xiaomi"}
+  {id:"xiaomi", tj:"Xiaomi", ru:"Xiaomi"},
+  {id:"other", tj:"Дигар", ru:"Другие"}
  ],
 
- Квартира:[
-  {id:"1room", tj:"1 ҳуҷра", ru:"1 комната"},
-  {id:"2room", tj:"2 ҳуҷра", ru:"2 комнаты"},
-  {id:"3room", tj:"3 ҳуҷра", ru:"3 комнаты"}
+ Компютер:[
+  {id:"all", tj:"Ҳама", ru:"Все"},
+  {id:"office", tj:"Офисӣ", ru:"Офисный"},
+  {id:"gaming", tj:"Геймерӣ", ru:"Игровой"},
+  {id:"mini", tj:"Mini PC", ru:"Mini PC"}
  ],
 
- Хона:[
-  {id:"yard", tj:"Ҳавлидор", ru:"Частный дом"},
-  {id:"villa", tj:"Вилла", ru:"Вилла"}
+ Ноутбук:[
+  {id:"all", tj:"Ҳама", ru:"Все"},
+  {id:"gaming", tj:"Геймерӣ", ru:"Игровой"},
+  {id:"office", tj:"Корӣ", ru:"Рабочий"},
+  {id:"ultrabook", tj:"Ultrabook", ru:"Ультрабук"}
+ ],
+
+ Телевизор:[
+  {id:"all", tj:"Ҳама", ru:"Все"},
+  {id:"smart", tj:"Smart TV", ru:"Smart TV"},
+  {id:"4k", tj:"4K", ru:"4K"},
+  {id:"oled", tj:"OLED", ru:"OLED"}
+ ],
+
+ /* ================= JOB ================= */
+
+ Кор:[
+  {id:"all", tj:"Ҳама", ru:"Все"},
+  {id:"office", tj:"Офис", ru:"Офис"},
+  {id:"driver", tj:"Ронанда", ru:"Водитель"},
+  {id:"builder", tj:"Сохтмон", ru:"Строительство"},
+  {id:"remote", tj:"Онлайн", ru:"Удалёнка"}
+ ],
+
+ Хизмат:[
+  {id:"all", tj:"Ҳама", ru:"Все"},
+  {id:"repair", tj:"Таъмир", ru:"Ремонт"},
+  {id:"cleaning", tj:"Тозакунӣ", ru:"Уборка"},
+  {id:"it", tj:"IT хизмат", ru:"IT услуги"}
+ ],
+
+ Таксӣ:[
+  {id:"all", tj:"Ҳама", ru:"Все"},
+  {id:"city", tj:"Шаҳрӣ", ru:"Город"},
+  {id:"intercity", tj:"Байнишаҳрӣ", ru:"Межгород"}
+ ],
+
+ Курьер:[
+  {id:"all", tj:"Ҳама", ru:"Все"},
+  {id:"food", tj:"Хӯрок", ru:"Еда"},
+  {id:"documents", tj:"Ҳуҷҷат", ru:"Документы"}
+ ],
+
+ /* ================= HOME ================= */
+
+ Мебел:[
+  {id:"all", tj:"Ҳама", ru:"Все"},
+  {id:"sofa", tj:"Диван", ru:"Диван"},
+  {id:"bed", tj:"Кат", ru:"Кровать"},
+  {id:"table", tj:"Миз", ru:"Стол"}
+ ],
+
+ "Асбоби хона":[
+  {id:"all", tj:"Ҳама", ru:"Все"},
+  {id:"gas", tj:"Газплита", ru:"Газплита"},
+  {id:"microwave", tj:"Микроволновка", ru:"Микроволновка"},
+  {id:"blender", tj:"Блендер", ru:"Блендер"}
+ ],
+
+ Кондиционер:[
+  {id:"all", tj:"Ҳама", ru:"Все"},
+  {id:"inverter", tj:"Инвертор", ru:"Инвертор"},
+  {id:"split", tj:"Сплит", ru:"Сплит"}
+ ],
+
+ Холодилник:[
+  {id:"all", tj:"Ҳама", ru:"Все"},
+  {id:"double", tj:"Дукамера", ru:"Двухкамерный"},
+  {id:"mini", tj:"Мини", ru:"Мини"}
+ ],
+
+ /* ================= OTHER ================= */
+
+ Либос:[
+  {id:"all", tj:"Ҳама", ru:"Все"},
+  {id:"men", tj:"Мардона", ru:"Мужская"},
+  {id:"women", tj:"Занона", ru:"Женская"},
+  {id:"kids", tj:"Кӯдакона", ru:"Детская"}
+ ],
+
+ Ҳайвонот:[
+  {id:"all", tj:"Ҳама", ru:"Все"},
+  {id:"dog", tj:"Саг", ru:"Собаки"},
+  {id:"cat", tj:"Гурба", ru:"Кошки"},
+  {id:"birds", tj:"Паранда", ru:"Птицы"}
+ ],
+
+ Китоб:[
+  {id:"all", tj:"Ҳама", ru:"Все"},
+  {id:"school", tj:"Мактабӣ", ru:"Школьные"},
+  {id:"novel", tj:"Роман", ru:"Романы"},
+  {id:"religion", tj:"Динӣ", ru:"Религия"}
  ]
 
 };
 
-catSel.addEventListener("change",loadSubs);
+/* ================= EVENTS ================= */
+
+catSel.addEventListener("change", loadSubs);
+
+/* ================= LOAD SUB ================= */
 
 function loadSubs(){
 
  const cat = catSel.value;
 
- if(!SUBS[cat]){
-  subSel.style.display="none";
-  subSel.innerHTML="";
-  subSel.removeAttribute("required");
+ // Mongo category string match
+ if(!cat || !SUBS[cat]){
+  subSel.style.display = "none";
+  subSel.innerHTML = "";
+  subSel.value = "";
   return;
  }
 
  const lang = localStorage.getItem("lang") || "tj";
 
- subSel.style.display="block";
- subSel.innerHTML="";
- subSel.setAttribute("required",true);
+ subSel.style.display = "block";
+ subSel.innerHTML = "";
 
+ // Default option
  const def = document.createElement("option");
- def.value="";
- def.textContent = lang==="tj" ? "Зеркатегория" : "Подкатегория";
+ def.value = "";
+ def.textContent = lang==="tj"
+  ? "Зеркатегория"
+  : "Подкатегория";
+
  subSel.appendChild(def);
 
+ // Add subs
  SUBS[cat].forEach(s=>{
+
   const opt = document.createElement("option");
-  opt.value = s.id;
+
+  opt.value = s.id;       // 👉 stored to Mongo as "sub"
   opt.textContent = s[lang];
+
   subSel.appendChild(opt);
+
  });
 
 }
 
-// AUTO ID
-document.getElementById("adId").value = Date.now();
+/* ================= IMPORTANT ================= */
+
+/*
+ ❌ DELETE THIS FROM YOUR PROJECT:
+
+ document.getElementById("adId").value = Date.now();
+
+ Mongo creates _id automatically!
+*/
+
+// ===== DOUBLE SUBMIT PROTECTION =====
+
+const form = document.getElementById("addForm");
+const btn  = document.getElementById("submitBtn");
+
+let locked = false;
+
+form.addEventListener("submit", (e)=>{
+
+ if(locked){
+  e.preventDefault();
+  return;
+ }
+
+ locked = true;
+
+ btn.disabled = true;
+ btn.innerText = "⏳ Бор шуда истодааст...";
+ btn.style.opacity = "0.7";
+
+});
+
+function goBack(){
+ if(document.referrer){
+  history.back();
+ }else{
+  location.href="/";
+ }
+}
+
+document.querySelector("form").onsubmit = async function(e){
+
+ e.preventDefault();
+
+ const form = new FormData(this);
+
+ const res = await fetch("/add-ad",{
+  method:"POST",
+  body:form,
+  credentials:"include"
+ });
+
+ const data = await res.json();
+
+ if(!data.success){
+  alert(data.message);   // 🔥 ОГОҲӢ
+  return;
+ }
+
+ location.href="/profile";
+
+};
 
 </script>
 

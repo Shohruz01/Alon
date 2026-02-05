@@ -51,16 +51,41 @@ button{
  font-size:16px;
 }
 
+.header{
+ display:flex;
+ align-items:center;
+ justify-content:space-between;
+ margin-bottom:10px;
+}
+
+.backBtn{
+ background:#2563eb;
+ color:white;
+ border:none;
+ padding:8px 14px;
+ border-radius:10px;
+ font-weight:700;
+ cursor:pointer;
+}
+
 </style>
 </head>
 
 <body>
 
+
 <div class="top">📅 Иловаи эълони брон</div>
+
+<button class="backBtn" onclick="history.back()">
+    ← Назад
+  </button>
 
 <div class="card">
 
-<form action="/add-ad" method="POST" enctype="multipart/form-data">
+<form id="addForm" action="/add-ad" method="POST" enctype="multipart/form-data">
+
+<input type="hidden" name="booking" value="true">
+<input type="hidden" name="duration" value="30">
 
 <input name="title" placeholder="Номи объект" required>
 
@@ -107,7 +132,8 @@ button{
 <option>Балҷувон</option>
 <option>Вахш</option>
 <option>Восеъ</option>
-<option>Данғара</option>                                   <option>Дӯстӣ</option>
+<option>Данғара</option>                                   
+<option>Дӯстӣ</option>
 <option>Ҷалолиддини Балхӣ</option>
 <option>Ҷайҳун</option>
 <option>Қабодиён</option>
@@ -151,9 +177,8 @@ button{
 
 <!-- BOOKING FLAG -->
 
-<input type="hidden" name="booking" value="true">
 
-<button>📤 Сабт кардани брон</button>
+<button type="submit" id="submitBtn">Сабт кардани брон</button>
 
 </form>
 
@@ -167,13 +192,9 @@ const sub = document.getElementById("sub");
 const SUBS = {
 
  sport:["Футбол","Мини футбол","Теннис","Баскетбол"],
-
  billiard:["Русский","Американка","VIP"],
-
  cs:["PC Zone","Playstation","VR"],
-
  barber:["Мардона","Занона","VIP"],
-
  food:["Кафе","Ресторан","Фастфуд"]
 
 };
@@ -196,6 +217,52 @@ cat.onchange = ()=>{
   o.textContent=x;
   sub.appendChild(o);
  });
+
+};
+
+// ===== SUBMIT BOOKING AD =====
+
+const form = document.getElementById("addForm");
+const btn  = document.getElementById("submitBtn");
+
+let locked = false;
+
+form.onsubmit = async function(e){
+
+ e.preventDefault();
+
+ if(locked) return;
+
+ locked = true;
+
+ btn.disabled = true;
+ btn.innerHTML = "⏳ Сабт шуда истодааст...";
+ btn.style.opacity = "0.7";
+
+ const formData = new FormData(form);
+
+ const res = await fetch("/add-ad",{
+  method:"POST",
+  body:formData,
+  credentials:"include"
+ });
+
+ const data = await res.json();
+
+ if(!data.success){
+
+  alert(data.message || "Хато ҳангоми сабт");
+  
+  btn.disabled = false;
+  btn.innerHTML = "Сабт кардани брон";
+  btn.style.opacity = "1";
+
+  locked = false;
+  return;
+ }
+
+ // ✅ муваффақ → профил
+ location.href="/profile";
 
 };
 

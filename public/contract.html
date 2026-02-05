@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="tj">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Шартномаи брон</title>
+</head>
+<body style="font-family:system-ui;padding:20px">
+
+<h2>📄 Шартномаи брон</h2>
+
+<div id="info">Loading...</div>
+
+<script>
+
+const params = new URLSearchParams(location.search);
+const id = params.get("id");
+
+fetch("/api/booking/"+id,{credentials:"include"})
+.then(r=>r.json())
+.then(b=>{
+
+ if(!b.success){
+  document.getElementById("info").innerHTML="❌ Брон ёфт нашуд";
+  return;
+ }
+
+ document.getElementById("info").innerHTML = `
+  <p><b>Эълон:</b> ${b.adTitle}</p>
+  <p><b>Сана:</b> ${b.date}</p>
+  <p><b>Вақт:</b> ${b.start} - ${b.end}</p>
+  <p><b>Иҷорагир:</b> ${b.renter}</p>
+ `;
+
+});
+
+</script>
+
+</body>
+</html>

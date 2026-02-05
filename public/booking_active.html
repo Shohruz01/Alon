@@ -3,9 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Бронҳои фаъол</title>
+
+<title>Active Bookings</title>
 
 <style>
+
 body{
  font-family:system-ui;
  background:#f2f4f8;
@@ -13,54 +15,196 @@ body{
  padding:12px;
 }
 
-h2{text-align:center}
+.header{
+ display:flex;
+ justify-content:space-between;
+ align-items:center;
+ margin-bottom:10px;
+}
+
+h2{
+ margin:0;
+}
+
+.lang button{
+ border:none;
+ padding:6px 10px;
+ border-radius:8px;
+ background:#2563eb;
+ color:white;
+ font-weight:700;
+ margin-left:5px;
+}
 
 .card{
  background:#eaffea;
- padding:12px;
- border-radius:12px;
+ padding:14px;
+ border-radius:14px;
+ margin-bottom:10px;
+ box-shadow:0 4px 10px rgba(0,0,0,.08);
+}
+
+.name{
+ font-weight:800;
+}
+
+.time{
+ font-size:14px;
+ margin-top:4px;
+}
+
+.empty{
+ text-align:center;
+ padding:20px;
+ opacity:.7;
+}
+
+.header{
+ display:flex;
+ align-items:center;
+ justify-content:space-between;
  margin-bottom:10px;
 }
+
+.backBtn{
+ background:#2563eb;
+ color:white;
+ border:none;
+ padding:8px 14px;
+ border-radius:10px;
+ font-weight:700;
+ cursor:pointer;
+}
+
 </style>
 </head>
 
 <body>
 
-<h2>✅ Бронҳои тасдиқшуда</h2>
 
-<div id="list">Загрузка...</div>
+<div class="header">
+
+<button class="backBtn" onclick="history.back()">
+    ← Назад
+  </button>
+
+ <h2 id="titleTxt">✅ Бронҳои тасдиқшуда</h2>
+
+ <div class="lang">
+  <button onclick="setLang('tj')">TJ</button>
+  <button onclick="setLang('ru')">RU</button>
+ </div>
+
+</div>
+
+<div id="list">Loading...</div>
 
 <script>
 
-fetch("/api/my-active-bookings")
+/* ================= LANGUAGE ================= */
+
+let lang = localStorage.getItem("lang") || "tj";
+
+const TXT = {
+
+ tj:{
+  title:"✅ Бронҳои тасдиқшуда",
+  empty:"Брони фаъол нест",
+  user:"Иҷорагир",
+  date:"Сана",
+  time:"Вақт"
+ },
+
+ ru:{
+  title:"✅ Активные брони",
+  empty:"Активных броней нет",
+  user:"Арендатор",
+  date:"Дата",
+  time:"Время"
+ }
+
+};
+
+function setLang(l){
+ lang = l;
+ localStorage.setItem("lang",l);
+ applyLang();
+ render();
+}
+
+function applyLang(){
+ document.getElementById("titleTxt").innerText = TXT[lang].title;
+}
+
+applyLang();
+
+/* ================= DATA ================= */
+
+let ACTIVE = [];
+
+fetch("/api/my-active-bookings",{ credentials:"include" })
 .then(r=>r.json())
-.then(active=>{
+.then(data=>{
+ ACTIVE = data;
+ render();
+});
+
+/* ================= RENDER ================= */
+
+function render(){
 
  const box = document.getElementById("list");
 
- if(!active.length){
-  box.innerHTML="Брони фаъол нест";
+ if(!ACTIVE.length){
+  box.innerHTML = `<div class="empty">${TXT[lang].empty}</div>`;
   return;
  }
 
- box.innerHTML="";
+ box.innerHTML = "";
 
- active.forEach(b=>{
+ ACTIVE.forEach(b=>{
+
+  const user =
+   b.renterId
+    ? (b.renterId.name || "User")
+    : "User";
+
+  const title =
+   b.adId?.title || "Эълон";
 
   box.innerHTML += `
-   <div class="card">
-    👤 ${b.renterName}<br>
-    🏠 ${b.adTitle}<br>
 
-    📅 ${b.date}<br>
-    ⏰ ${b.start} - ${b.end}
+   <div class="card">
+
+    <div class="name">
+     🏢 ${title}
+    </div>
+
+    <div class="name">
+     👤 ${TXT[lang].user}: ${user}
+    </div>
+
+    <div class="time">
+     📅 ${TXT[lang].date}: ${b.date}
+    </div>
+
+    <div class="time">
+     ⏰ ${TXT[lang].time}: ${b.start} - ${b.end}
+    </div>
 
    </div>
   `;
-
  });
 
-});
+}
+
+function goBack(){
+ if(document.referrer){
+  history.back();
+ }else{
+  location.href="/";
+ }
+}
 
 </script>
 

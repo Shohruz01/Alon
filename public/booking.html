@@ -161,11 +161,26 @@ select{
  }
 }
 
+.backBtn{
+ position:fixed;
+ top:10px;
+ left:10px;
+ z-index:999;
+ background:#2563eb;
+ color:white;
+ border:none;
+ padding:8px 12px;
+ border-radius:10px;
+ font-weight:700;
+ box-shadow:0 4px 10px rgba(0,0,0,.2);
+}
 
 </style>
 </head>
 
 <body>
+
+<button onclick="goBack()" class="backBtn">← Назад</button>
 
 <!-- ===== HEADER ===== -->
 
@@ -182,23 +197,39 @@ select{
 <select id="cityFilter">
 <option value="">Ҳамаи шаҳрҳо ва ноҳияҳо</option>
 <option>Душанбе</option>
-<option>Хуҷанд</option>                                    <option>Бохтар</option>                                    <option>Кӯлоб</option>                                     <option>Истаравшан</option>                                <option>Панҷакент</option>
+<option>Хуҷанд</option>                                   
+<option>Бохтар</option>                                   
+<option>Кӯлоб</option>                                     
+<option>Истаравшан</option>                                
+<option>Панҷакент</option>
 <option>Турсунзода</option>
 <option>Исфара</option>
-<option>Конибодом</option>                                 <option>Гулистон</option>                                  <option>Ваҳдат</option>                                    <option>Роғун</option>                                     <option>Норак</option>
+<option>Конибодом</option>                                 
+<option>Гулистон</option>                                  
+<option>Ваҳдат</option>                                    
+<option>Роғун</option>                                     
+<option>Норак</option>
 <option>Ҳисор</option>
 
 <option>Ашт</option>
-<option>Бобоҷон Ғафуров</option>                           <option>Деваштич</option>
+<option>Бобоҷон Ғафуров</option>                           
+<option>Деваштич</option>
 <option>Зафаробод</option>
 <option>Исмоили Сомонӣ</option>
-<option>Ҷаббор Расулов</option>                            <option>Кӯҳистони Мастчоҳ</option>                         <option>Мастчоҳ</option>                                   <option>Спитамен</option>                                  <option>Шаҳристон</option>                                                                                            <option>Балҷувон</option>
+<option>Ҷаббор Расулов</option>                            
+<option>Кӯҳистони Мастчоҳ</option>                         
+<option>Мастчоҳ</option>                                   
+<option>Спитамен</option>                                  
+<option>Шаҳристон</option>                                                                                            
+<option>Балҷувон</option>
 <option>Вахш</option>
 <option>Восеъ</option>
-<option>Данғара</option>                                   <option>Дӯстӣ</option>
+<option>Данғара</option>                                   
+<option>Дӯстӣ</option>
 <option>Ҷалолиддини Балхӣ</option>
 <option>Ҷайҳун</option>
-<option>Қабодиён</option>                                  <option>Кӯшониён</option>
+<option>Қабодиён</option>                                  
+<option>Кӯшониён</option>
 <option>Левакант</option>
 <option>Муъминобод</option>
 <option>Панҷ</option>
@@ -210,14 +241,21 @@ select{
 <option>Дарвоз</option>
 <option>Ишкошим</option>
 <option>Мурғоб</option>
-<option>Роштқалъа</option>                                 <option>Рӯшон</option>                                     <option>Шуғнон</option>                                    <option>Ванҷ</option>                                      
+<option>Роштқалъа</option>                                 
+<option>Рӯшон</option>                                     
+<option>Шуғнон</option>                                    
+<option>Ванҷ</option>                                      
 </select>
 
-<!-- BOOKING CATEGORY -->                                                                                             <select id="cat" name="category" required>                 <option value="">Категория</option>                        <option value="sport">⚽ Майдони варзиш</option>
+<!-- BOOKING CATEGORY -->                                                                                             
+<select id="cat" name="category" required>                 
+<option value="">Категория</option>                        
+<option value="sport">⚽ Майдони варзиш</option>
 <option value="billiard">🎱 Билярд</option>
 <option value="cs">🎮 Counter Strike</option>
 <option value="barber">💈 Сартарошхона</option>
-<option value="food">🍽 Тарабхона</option>                  </select>
+<option value="food">🍽 Тарабхона</option>                  
+</select>
 
 <!-- SUB CATEGORY -->
 
@@ -231,19 +269,24 @@ select{
 
 <script>
 
-let ALL=[];
+let ALL = [];
 
-// LOAD BOOKINGS
-fetch("/api/booking-ads")
-.then(r=>r.json())
-.then(d=>{
- ALL=d;
- render();
-});
-
-// GET FILTER ELEMENTS
+// ELEMENTS
 const cityFilter = document.getElementById("cityFilter");
 const catFilter  = document.getElementById("cat");
+const grid       = document.getElementById("grid");
+
+// LOAD BOOKINGS FROM MONGO
+fetch("/api/bookings")
+.then(r => r.json())
+.then(d => {
+ console.log("BOOKINGS:", d);
+ ALL = d;
+ render();
+})
+.catch(e=>{
+ console.log("FETCH ERROR:", e);
+});
 
 // FILTER EVENTS
 cityFilter.addEventListener("change", render);
@@ -252,31 +295,36 @@ catFilter.addEventListener("change", render);
 // RENDER
 function render(){
 
- grid.innerHTML="";
+ grid.innerHTML = "";
 
- const city=cityFilter.value;
- const cat=catFilter.value;
+ const city = cityFilter.value;
+ const cat  = catFilter.value;
 
- let list=ALL.filter(a=>{
+ let list = ALL.filter(a => {
 
-  if(city && a.city!==city) return false;
-  if(cat && a.category!==cat) return false;
+  if(city && a.city?.toLowerCase() !== city.toLowerCase()) return false;
+  if(cat && a.category !== cat) return false;
 
   return true;
+
  });
 
  if(!list.length){
-  grid.innerHTML=`<div class="empty">Брон ёфт нашуд</div>`;
+  grid.innerHTML = `<div class="empty">Брон ёфт нашуд</div>`;
   return;
  }
 
- list.forEach(ad=>{
+ list.forEach(ad => {
 
- grid.innerHTML+=`
+  const img = ad.photos?.[0]
+   ? "/" + ad.photos[0].replace(/^\/+/,"")
+   : "/logo.png";
 
- <div class="card" onclick="openBooking(${ad.id})">
+  grid.innerHTML += `
 
-  <img src="${ad.photos?.[0] || 'logo.png'}">
+ <div class="card" onclick="openBooking('${ad._id}')">
+
+  <img src="${img}">
 
   <div class="card-body">
 
@@ -287,9 +335,9 @@ function render(){
   </div>
 
   <button class="book-btn"
- onclick="book('${ad.whatsapp}','${ad.title}')">
-  Брон кардан
-</button>
+   onclick="event.stopPropagation(); book('${ad.whatsapp}','${ad.title}')">
+   Брон кардан
+  </button>
 
  </div>
 
@@ -300,25 +348,34 @@ function render(){
 }
 
 // WHATSAPP BOOKING
-function book(phone,title){
+function book(phone, title){
 
  if(!phone){
   alert("WhatsApp илова нашудааст");
   return;
  }
 
- const msg=encodeURIComponent(
-  "Салом! Ман мехоҳам брон кунам: "+title
+ const msg = encodeURIComponent(
+  "Салом! Ман мехоҳам брон кунам:\n" + title
  );
 
  window.open(
-  "https://wa.me/"+phone+"?text="+msg,
+  "https://wa.me/" + phone + "?text=" + msg,
   "_blank"
  );
 }
 
+// OPEN BOOKING VIEW
 function openBooking(id){
  window.location.href = "/booking-view.html?id=" + id;
+}
+
+function goBack(){
+ if(document.referrer){
+  history.back();
+ }else{
+  location.href="/";
+ }
 }
 
 </script>

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Эълон</title>
+<title data-key="title_page">Эълон</title>
 
 <style>
 
@@ -55,7 +55,7 @@ body{
  background:white;
  margin:12px;
  padding:14px;
- padding-bottom:70px
+ padding-bottom:70px;
  border-radius:18px;
  box-shadow:0 8px 20px rgba(0,0,0,.1);
 }
@@ -175,15 +175,54 @@ button{
  border-radius:12px;
 }
 
+.lang-box{
+ position:fixed;
+ right:12px;
+ top:30px;
+ z-index:10000;
+ background:white;
+ padding:6px;
+ border-radius:12px;
+ box-shadow:0 4px 12px rgba(0,0,0,.2);
+}
+
+#catBox{
+ margin-top:6px;
+ font-size:13px;
+ font-weight:700;
+ color:#2563eb;
+}
+
+.backBtn{
+ position:fixed;
+ top:10px;
+ left:10px;
+ z-index:999;
+ background:#2563eb;
+ color:white;
+ border:none;
+ padding:8px 12px;
+ border-radius:10px;
+ font-weight:700;
+ box-shadow:0 4px 10px rgba(0,0,0,.2);
+}
+
 </style>
 </head>
 
 <body>
 
+<button onclick="goBack()" class="backBtn">← Назад</button>
+
 <div class="top-bar">
  <button onclick="history.back()">⬅</button>
- <b>Эълон</b>
+ <b data-key="title_page">Эълон</b>
  <div></div>
+</div>
+
+<div class="lang-box">
+ <button onclick="setLang('tj')">TJ</button>
+ <button onclick="setLang('ru')">RU</button>
 </div>
 
 <div id="slider"></div>
@@ -199,8 +238,10 @@ button{
  <div id="price" class="price"></div>
  <div id="title" class="title"></div>
  <div id="city" class="city"></div>
+ <div id="catBox" class="city"></div>
  <div id="phone" class="phone"></div>
  <div id="desc" class="desc"></div>
+
  <div id="expireBox" style="
  margin-top:8px;
  padding:10px;
@@ -213,16 +254,16 @@ button{
 "></div>
 
  <div class="action-row">
-  <button id="msgBtn">💬 Навиштан</button>
+  <button id="msgBtn" data-key="btn_msg">💬 Навиштан</button>
   <button id="vipBtn">⭐ VIP</button>
-  <button id="ownerBtn">👤 Профил</button>
-  <button id="deleteBtn">🗑 Удалить</button>
+  <button id="ownerBtn" data-key="btn_profile">👤 Профил</button>
+  <button id="deleteBtn" data-key="btn_delete">🗑 Удалить</button>
  </div>
 
 </div>
 
 <div class="call-box">
- <button id="callBtn">📞 Занг задан</button>
+ <button id="callBtn" data-key="btn_call">📞 Занг задан</button>
 </div>
 
 <div id="likeBtn">❤️</div>
@@ -234,9 +275,67 @@ button{
 
 <script>
 
+/* ================= LANG ================= */
+
+const translations = {
+
+tj:{
+ title_page:"Эълон",
+ btn_msg:"Навиштан",
+ btn_profile:"Профил",
+ btn_delete:"Нест кардан",
+ btn_call:"Занг задан",
+ show_number:"Намоиши рақам",
+ expired:"Муҳлат анҷом ёфт",
+ left:"Мондааст"
+},
+
+ru:{
+ title_page:"Объявление",
+ btn_msg:"Написать",
+ btn_profile:"Профиль",
+ btn_delete:"Удалить",
+ btn_call:"Позвонить",
+ show_number:"Показать номер",
+ expired:"Срок истёк",
+ left:"Осталось"
+}
+
+};
+
+function setLang(l){
+ localStorage.setItem("lang",l);
+ applyLang();
+}
+
+function applyLang(){
+
+ const lang = localStorage.getItem("lang") || "tj";
+
+ document.querySelectorAll("[data-key]").forEach(el=>{
+  const k = el.dataset.key;
+  if(translations[lang][k]){
+   el.innerText = translations[lang][k];
+  }
+ });
+
+}
+
+applyLang();
+
+/* ================= MAIN ================= */
+
 document.addEventListener("DOMContentLoaded",()=>{
 
 const adId = new URLSearchParams(location.search).get("id");
+
+window.AD_ID = adId;
+
+if(!adId || adId.length !== 24){
+ alert("ID хато");
+ throw "BAD ID";
+}
+
 if(!adId) return alert("ID нест");
 
 const slider = document.getElementById("slider");
@@ -247,7 +346,8 @@ const deleteBtn = document.getElementById("deleteBtn");
 
 let CURRENT_AD = null;
 
-// LOAD AD
+/* LOAD AD */
+
 fetch("/api/ad/"+adId)
 .then(r=>r.json())
 .then(ad=>{
@@ -256,47 +356,93 @@ fetch("/api/ad/"+adId)
 
  CURRENT_AD = ad;
 
-// SHOW EXPIRE TIME
-showExpireTime(ad.expireAt);
+ // ADD VIEW
+fetch("/api/add-view",{
+ method:"POST",
+ headers:{
+  "Content-Type":"application/json"
+ },
+ body: JSON.stringify({ adId })
+});
 
- // IMAGES
- slider.innerHTML="";
- ad.photos.forEach(src=>{
 
-  const img=document.createElement("img");
-  img.src=src;
-  img.onclick=()=>{
-   modal.style.display="flex";
-   modalImg.src=img.src;
-   document.body.style.overflow="hidden";
+ showExpireTime(ad.expireAt);
+
+  slider.innerHTML = "";
+
+if (!ad.photos || ad.photos.length === 0) {
+
+ const noImg = document.createElement("img");
+ noImg.src = "/noimage.png";
+ slider.appendChild(noImg);
+
+} else {
+
+ ad.photos.forEach(src => {
+
+  const img = document.createElement("img");
+
+  // ✅ FIX PATH
+  img.src = src.startsWith("/uploads")
+   ? src
+   : "/uploads/" + src;
+
+  img.loading = "lazy";
+
+  img.onerror = () => {
+   console.log("IMAGE LOAD ERROR:", img.src);
   };
+
+  img.onclick = () => {
+   modal.style.display = "flex";
+   modalImg.src = img.src;
+   document.body.style.overflow = "hidden";
+  };
+
   slider.appendChild(img);
 
  });
 
- // INFO
- price.innerText="💰 "+ad.price;
+}
+
+ /* INFO */
+ price.innerText="💰 "+formatPrice(ad.price);
  title.innerText=ad.title;
  city.innerText="📍 "+ad.city;
- desc.innerText=ad.desc||"";
- checkLoginAndPhone(ad.phone);
+ // CATEGORY + SUB
+let catText = ad.category || "";
+let subText = ad.sub ? " / " + ad.sub : "";
 
- timeAgo.innerText="🕒 "+new Date(ad.time).toLocaleDateString();
+catBox.innerText = "📂 " + catText + subText;
+ desc.innerText=ad.desc || "";
+
+ timeAgo.innerText =
+  "🕒 " + new Date(ad.time).toLocaleDateString();
+
  viewCount.innerText="👁 "+(ad.views||0);
  likeCount.innerText="❤️ "+(ad.likes||0);
 
- // OWNER CHECK
+ checkLoginAndPhone(ad.phone);
+
+ /* OWNER CHECK */
+
  fetch("/api/me",{credentials:"include"})
  .then(r=>r.json())
  .then(me=>{
-  if(me.logged && me.user.id===ad.userId){
+
+  if(
+   me.logged &&
+   String(me.user._id) === String(ad.userId)
+  ){
    deleteBtn.style.display="block";
   }
+
  });
 
 });
 
-// CLOSE MODAL
+/* CLOSE MODAL */
+
 modal.onclick=(e)=>{
  if(e.target.id!=="imgModal") return;
  modal.style.display="none";
@@ -304,41 +450,41 @@ modal.onclick=(e)=>{
  document.body.style.overflow="";
 };
 
-// LIKE
+/* LIKE */
+
 likeBtn.onclick = ()=>{
 
  fetch("/api/like",{
   method:"POST",
-  headers:{"Content-Type":"application/json"},
-  credentials:"include", // ⭐ МУҲИМ
-  body:JSON.stringify({ adId })
+  headers:{ "Content-Type":"application/json" },
+  credentials:"include",
+  body:JSON.stringify({ adId: window.AD_ID })
  })
  .then(r=>r.json())
  .then(d=>{
 
   if(!d.success){
-   alert(d.message || "Хато");
+   alert("Хато");
    return;
   }
 
-  likeCount.innerText = "❤️ " + d.likes;
+  likeCount.innerText="❤️ "+d.likes;
 
-  if(d.liked){
-   likeBtn.classList.add("active");
-  }else{
-   likeBtn.classList.remove("active");
-  }
+  d.liked
+   ? likeBtn.classList.add("active")
+   : likeBtn.classList.remove("active");
 
  });
 
 };
 
-// DELETE
-deleteBtn.onclick=async()=>{
+/* DELETE */
+
+deleteBtn.onclick = async ()=>{
 
  if(!confirm("Удалить?")) return;
 
- const r = await fetch("/delete-ad/"+CURRENT_AD.id,{
+ const r = await fetch("/delete-ad/"+CURRENT_AD._id,{
   method:"POST",
   credentials:"include"
  });
@@ -352,13 +498,36 @@ deleteBtn.onclick=async()=>{
 
 };
 
-// PROFILE
+/* PROFILE */
+
 ownerBtn.onclick=()=>{
  if(CURRENT_AD)
  location="/user.html?id="+CURRENT_AD.userId;
 };
 
-// CALL
+/* CHAT */
+
+msgBtn.onclick = ()=>{
+
+ fetch("/api/me",{ credentials:"include" })
+ .then(r=>r.json())
+ .then(d=>{
+
+  if(!d.logged){
+   goLogin();
+   return;
+  }
+
+  if(!CURRENT_AD) return;
+
+  location = "/chat.html?to=" + CURRENT_AD.userId;
+
+ });
+
+};
+
+/* CALL */
+
 callBtn.onclick=()=>{
 
  fetch("/api/me",{credentials:"include"})
@@ -370,8 +539,7 @@ callBtn.onclick=()=>{
    return;
   }
 
-  if(CURRENT_AD)
-   location="tel:"+CURRENT_AD.phone;
+  location="tel:"+CURRENT_AD.phone;
 
  });
 
@@ -379,47 +547,37 @@ callBtn.onclick=()=>{
 
 });
 
+/* ================= PHONE ================= */
+
 function checkLoginAndPhone(phone){
 
  fetch("/api/me",{credentials:"include"})
  .then(r=>r.json())
  .then(d=>{
 
-  const box = document.getElementById("phone");
+  const box=document.getElementById("phone");
+  const lang=localStorage.getItem("lang")||"tj";
 
-  // ===== USER LOGGED =====
   if(d.logged){
 
-   box.innerHTML = `
-    📞 <a href="tel:${phone}" style="
-     text-decoration:none;
-     font-weight:800;
-     color:#2563eb
-    ">
+   box.innerHTML=`
+    📞 <a href="tel:${phone}"
+     style="text-decoration:none;font-weight:800;color:#2563eb">
      ${phone}
     </a>
    `;
 
-  }
+  }else{
 
-  // ===== USER NOT LOGGED =====
-  else{
+   const masked=maskPhone(phone);
 
-   const masked = maskPhone(phone);
-
-   box.innerHTML = `
+   box.innerHTML=`
     📞 <b>${masked}</b><br>
-
-    <button onclick="goLogin()" style="
-     margin-top:8px;
-     padding:8px 16px;
-     background:#16a34a;
-     border:none;
-     border-radius:10px;
-     color:white;
-     font-weight:800
-    ">
-     👁 Намоиши рақам
+    <button onclick="goLogin()"
+     style="margin-top:8px;padding:8px 16px;
+     background:#16a34a;border:none;border-radius:10px;
+     color:white;font-weight:800">
+     👁 ${translations[lang].show_number}
     </button>
    `;
 
@@ -429,109 +587,88 @@ function checkLoginAndPhone(phone){
 
 }
 
-// MASK NUMBER
+/* HELPERS */
+
 function maskPhone(phone){
 
- if(!phone) return "";
-
- const clean = phone.replace(/\D/g,"");
-
- if(clean.length < 7) return phone;
-
- const start = clean.substring(0,3); // 992
- const end   = clean.substring(clean.length-2); // 45
-
- return start + "****" + end;
+ const c=phone.replace(/\D/g,"");
+ return c.substring(0,3)+"****"+c.substring(c.length-2);
 }
 
-// GO LOGIN WITH BACK URL
 function goLogin(){
 
- const back = encodeURIComponent(location.href);
-
- location.href = "/login.html?back=" + back;
+ const back=encodeURIComponent(location.href);
+ location="/login.html?back="+back;
 }
 
-// ================= DATE FORMAT =================
-
-function formatDate(ts){
-
- const d = new Date(ts);
-
- const day = d.getDate().toString().padStart(2,"0");
- const month = (d.getMonth()+1).toString().padStart(2,"0");
- const year = d.getFullYear();
-
- return day+"."+month+"."+year;
+function formatPrice(p){
+ return Number(p||0).toLocaleString("ru-RU")+" сомонӣ";
 }
 
-document.getElementById("vipBtn").onclick = ()=>{
-
- const box = document.createElement("div");
-
- box.innerHTML = `
-  <div style="
-   position:fixed;
-   bottom:90px;
-   left:50%;
-   transform:translateX(-50%);
-   background:#111;
-   color:white;
-   padding:14px 18px;
-   border-radius:14px;
-   font-size:14px;
-   z-index:9999;
-   box-shadow:0 8px 20px rgba(0,0,0,.4);
-  ">
-   🚀 VIP ба наздикӣ дастрас мешавад
-  </div>
- `;
-
- document.body.appendChild(box);
-
- setTimeout(()=>{
-  box.remove();
- },2500);
-
-};
+/* EXPIRE */
 
 function showExpireTime(expireAt){
 
  if(!expireAt) return;
 
- const box = document.getElementById("expireBox");
- box.style.display = "block";
+ const box=document.getElementById("expireBox");
+ box.style.display="block";
+
+ const lang=localStorage.getItem("lang")||"tj";
 
  function update(){
 
-  const now = Date.now();
-  let diff = expireAt - now;
+  const diff=expireAt-Date.now();
 
-  if(diff <= 0){
-   box.innerHTML = "⛔ Муҳлат анҷом ёфт";
+  if(diff<=0){
+   box.innerHTML="⛔ "+translations[lang].expired;
    return;
   }
 
-  const days = Math.floor(diff / (1000*60*60*24));
-  diff %= (1000*60*60*24);
+  const d=Math.floor(diff/86400000);
+  const h=Math.floor(diff%86400000/3600000);
+  const m=Math.floor(diff%3600000/60000);
 
-  const hours = Math.floor(diff / (1000*60*60));
-  diff %= (1000*60*60);
-
-  const mins = Math.floor(diff / (1000*60));
-
-  let text = "⏳ Мондааст: ";
-
-  if(days > 0) text += days + " рӯз ";
-  if(hours > 0) text += hours + " соат ";
-
-  text += mins + " дақ";
-
-  box.innerHTML = text;
+  box.innerHTML=
+   "⏳ "+translations[lang].left+
+   ": "+d+"д "+h+"ч "+m+"м";
  }
 
  update();
- setInterval(update, 60000);
+ setInterval(update,60000);
+}
+
+/* VIP */
+
+vipBtn.onclick=()=>{
+
+ const box=document.createElement("div");
+
+ box.innerHTML=`
+ <div style="
+ position:fixed;
+ bottom:90px;
+ left:50%;
+ transform:translateX(-50%);
+ background:#111;
+ color:white;
+ padding:14px 18px;
+ border-radius:14px;
+ z-index:9999">
+ 🚀 VIP скоро
+ </div>`;
+
+ document.body.appendChild(box);
+
+ setTimeout(()=>box.remove(),2500);
+};
+
+function goBack(){
+ if(document.referrer){
+  history.back();
+ }else{
+  location.href="/";
+ }
 }
 
 </script>

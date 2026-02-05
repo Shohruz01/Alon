@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="tj">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 
-<title>Маъқул</title>
+<title>Favorites</title>
 
 <style>
 
@@ -14,47 +14,73 @@ body{
  font-family:system-ui;
 }
 
-.fav-title{
+/* HEADER */
+
+.header{
  font-size:18px;
- font-weight:700;
+ font-weight:900;
  padding:14px;
  background:white;
- box-shadow:0 2px 8px rgba(0,0,0,.08);
+ box-shadow:0 2px 10px rgba(0,0,0,.08);
+ display:flex;
+ justify-content:space-between;
+ align-items:center;
 }
+
+/* LANG */
+
+.lang button{
+ background:#eef2ff;
+ border:none;
+ padding:6px 12px;
+ border-radius:10px;
+ font-weight:700;
+}
+
+/* GRID */
 
 .ads{
  display:grid;
- grid-template-columns:repeat(2,1fr);
+ grid-template-columns:repeat(auto-fill,minmax(160px,1fr));
  gap:12px;
  padding:12px;
 }
 
-.ad-card{
+/* CARD */
+
+.card{
  background:white;
- border-radius:16px;
+ border-radius:18px;
  overflow:hidden;
- box-shadow:0 4px 10px rgba(0,0,0,.08);
+ box-shadow:0 4px 12px rgba(0,0,0,.08);
+ position:relative;
 }
 
-.ad-card img{
+/* IMAGE */
+
+.card img{
  width:100%;
- height:150px;
+ height:160px;
  object-fit:cover;
 }
 
-.ad-info{
- padding:8px;
+/* INFO */
+
+.info{
+ padding:10px;
 }
 
-.ad-price{
- font-weight:700;
+.price{
+ font-weight:900;
  color:#27ae60;
 }
 
-.ad-title{
+.title{
  font-size:14px;
  margin-top:4px;
 }
+
+/* REMOVE BTN */
 
 .remove-btn{
  width:90%;
@@ -62,16 +88,33 @@ body{
  padding:10px;
  border:none;
  border-radius:12px;
- background:#ff4757;
+ background:#ef4444;
  color:white;
- font-weight:700;
+ font-weight:800;
  display:block;
 }
 
+/* EMPTY */
+
 .empty{
- padding:30px;
+ padding:40px;
  text-align:center;
- color:#666;
+ color:#777;
+ font-weight:700;
+}
+
+.backBtn{
+ position:fixed;
+ top:10px;
+ left:10px;
+ z-index:999;
+ background:#2563eb;
+ color:white;
+ border:none;
+ padding:8px 12px;
+ border-radius:10px;
+ font-weight:700;
+ box-shadow:0 4px 10px rgba(0,0,0,.2);
 }
 
 </style>
@@ -79,93 +122,189 @@ body{
 
 <body>
 
-<div class="fav-title">❤️ Эълонҳои маъқул</div>
+<button onclick="goBack()" class="backBtn">← Назад</button>
+
+<div class="header">
+ <span id="titleTxt">❤️ Маъқул</span>
+
+ <div class="lang">
+  <button onclick="setLang('tj')">TJ</button>
+  <button onclick="setLang('ru')">RU</button>
+ </div>
+</div>
 
 <div id="favAds" class="ads"></div>
 
 <script>
 
-fetch("/api/me",{credentials:"include"})
+/* ================= LANGUAGE ================= */
+
+let lang = localStorage.getItem("lang") || "tj";
+
+const TXT = {
+
+ tj:{
+  title:"❤️ Эълонҳои маъқул",
+  login:"Аввал ворид шавед",
+  empty:"Ҳоло эълони маъқул нест",
+  remove:"❌ Нест кардан",
+  error:"Хато шуд"
+ },
+
+ ru:{
+  title:"❤️ Избранное",
+  login:"Сначала войдите",
+  empty:"Нет избранных объявлений",
+  remove:"❌ Удалить",
+  error:"Ошибка"
+ }
+
+};
+
+function setLang(l){
+ lang=l;
+ localStorage.setItem("lang",l);
+ applyLang();
+ render();
+}
+
+function applyLang(){
+ titleTxt.innerText = TXT[lang].title;
+}
+
+applyLang();
+
+/* ================= DATA ================= */
+
+let USER_ID = null;
+let ALL_ADS = [];
+
+/* ================= LOAD USER ================= */
+
+fetch("/api/me",{ credentials:"include" })
 .then(r=>r.json())
 .then(me=>{
 
  if(!me.logged){
-  document.getElementById("favAds").innerHTML = `
-   <div class="empty">Аввал ворид шавед</div>
-  `;
+  showEmpty(TXT[lang].login);
   return;
  }
 
- const uid = me.user.id;
+ USER_ID = me.user._id || me.user.id;
 
- fetch('/api/ads')
- .then(r => r.json())
- .then(data => {
-
-  const box = document.getElementById("favAds");
-
-  const filtered = data.filter(ad =>
-   ad.likedBy && ad.likedBy.includes(uid)
-  );
-
-  if(filtered.length === 0){
-   box.innerHTML = `
-    <div class="empty">
-     ❤️ Ҳоло эълони маъқул нест
-    </div>
-   `;
-   return;
-  }
-
-  filtered.forEach(ad => {
-
-   const img = ad.photos?.[0] || "/noimage.png";
-
-   const card = document.createElement("div");
-card.className = "ad-card";
-
-card.onclick = ()=>{
- location.href = "/ad.html?id=" + ad.id;
-};   
-
-   card.innerHTML = `
-    <img src="${img}">
-    <div class="ad-info">
-     <div class="ad-price">💰 ${ad.price}</div>
-     <div class="ad-title">${ad.title}</div>
-    </div>
-
-     <button class="remove-btn" onclick="event.stopPropagation(); unlike(${ad.id})">
-     ❌ Нест кардан
-    </button>
-   `;
-
-   box.appendChild(card);
-
-  });
-
- });
+ loadAds();
 
 });
 
-// UNLIKE (REMOVE FROM FAVORITES)
-function unlike(adId){
+/* ================= LOAD ADS ================= */
+
+function loadAds(){
+
+ fetch("/api/ads")
+ .then(r=>r.json())
+ .then(list=>{
+
+  ALL_ADS = list;
+  render();
+
+ });
+
+}
+
+/* ================= RENDER ================= */
+
+function render(){
+
+ const box = document.getElementById("favAds");
+ box.innerHTML="";
+
+ if(!USER_ID) return;
+
+ const favs = ALL_ADS.filter(ad =>
+  ad.likedBy &&
+  ad.likedBy.map(String).includes(String(USER_ID))
+ );
+
+ if(!favs.length){
+  showEmpty(TXT[lang].empty);
+  return;
+ }
+
+ favs.forEach(ad=>{
+
+  const card = document.createElement("div");
+  card.className="card";
+
+  const img = ad.photos?.[0] || "/noimage.png";
+
+  card.onclick = ()=>{
+   location.href="/ad.html?id="+ad._id;
+  };
+
+  card.innerHTML=`
+
+   <img src="${img}">
+
+   <div class="info">
+    <div class="price">💰 ${ad.price}</div>
+    <div class="title">${ad.title}</div>
+   </div>
+
+   <button class="remove-btn"
+    onclick="event.stopPropagation();unlike('${ad._id}')">
+    ${TXT[lang].remove}
+   </button>
+
+  `;
+
+  box.appendChild(card);
+
+ });
+
+}
+
+/* ================= EMPTY ================= */
+
+function showEmpty(text){
+
+ document.getElementById("favAds").innerHTML = `
+  <div class="empty">${text}</div>
+ `;
+
+}
+
+/* ================= UNLIKE ================= */
+
+function unlike(id){
 
  fetch("/api/like",{
   method:"POST",
-  headers:{"Content-Type":"application/json"},
+  headers:{
+   "Content-Type":"application/json"
+  },
   credentials:"include",
-  body:JSON.stringify({ adId })
+  body:JSON.stringify({ adId:id })
  })
  .then(r=>r.json())
  .then(d=>{
+
   if(d.success){
-   location.reload();
+   ALL_ADS = ALL_ADS.filter(a => a._id !== id);
+   render();
   }else{
-   alert("Хато шуд");
+   alert(TXT[lang].error);
   }
+
  });
 
+}
+
+function goBack(){
+ if(document.referrer){
+  history.back();
+ }else{
+  location.href="/";
+ }
 }
 
 </script>
