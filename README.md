@@ -11,3 +11,7 @@ Lawyer and Programmer from Tajikistan.
 - LinkedIn: https://linkedin.com/in/shohruz-alon
 - Telegram: https://t.me/Shohruz_alon
 - Instagram: https://instagram.com/shohruz.alon
+## Article
+
+Read about the project:
+https://medium.com/...
